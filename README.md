@@ -23,7 +23,7 @@ The API supports standard CRUD (Create, Read, Update, Delete) operations on the 
 ├── Cargo.toml                             # Project configuration and dependencies
 ├── Cargo.lock                             # Locked dependency versions
 ├── migrations/                            # Database migrations
-│   └── 20230101000000_create_users_table.sql
+│   └── 20250306220539_create_users_table.sql
 ├── src/
 │   ├── config.rs                          # Application configuration
 │   ├── error.rs                           # Error handling
