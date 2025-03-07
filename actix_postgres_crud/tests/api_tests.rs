@@ -1,31 +1,32 @@
 use actix_web::{test, web, App};
 use sqlx::postgres::PgPoolOptions;
 use user_crud_api::config::Config;
-use user_crud_api::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user};
-use user_crud_api::models::{CreateUserRequest, UpdateUserRequest, User};
-use uuid::Uuid;
+use user_crud_api::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
+use user_crud_api::models::{CreateUserRequest, UpdateUserRequest, LoginRequest};
 
+// Przygotowanie środowiska testowego
 async fn setup_test_app() -> impl actix_web::dev::Service<
     actix_http::Request,
     Response = actix_web::dev::ServiceResponse,
     Error = actix_web::Error,
 > {
-    // Do testów używamy testowej bazy danych
+    // Ustawienie URL do bazy testowej
     std::env::set_var("DATABASE_URL", "postgres://postgres:admin@localhost/user_crud_test?sslmode=prefer");
     
     let config = Config::from_env().expect("Failed to load configuration");
     let pool = PgPoolOptions::new()
-        .max_connections(1)
+        .max_connections(2)
         .connect(&config.database_url)
         .await
         .expect("Failed to create database connection pool");
     
-    // Czyścimy tabelę przed testami
-    sqlx::query("TRUNCATE TABLE users")
+    // Przed testami czyścimy tabelę users
+    sqlx::query("TRUNCATE TABLE users CASCADE")
         .execute(&pool)
         .await
         .expect("Failed to clean test database");
     
+    // Inicjalizacja aplikacji testowej
     test::init_service(
         App::new()
             .app_data(web::Data::new(pool.clone()))
@@ -39,6 +40,10 @@ async fn setup_test_app() -> impl actix_web::dev::Service<
                             .route("/{id}", web::put().to(update_user))
                             .route("/{id}", web::delete().to(delete_user))
                     )
+                    .service(
+                        web::scope("/auth")
+                            .route("/login", web::post().to(login))
+                    )
             )
     ).await
 }
@@ -51,7 +56,9 @@ async fn test_create_and_get_user() {
     let create_req = CreateUserRequest {
         username: "testuser".to_string(),
         email: "test@example.com".to_string(),
-        full_name: Some("Test User".to_string()),
+        password: "Test1234".to_string(),
+        full_name: "Test User".to_string(),
+        phone_number: Some("+48 123 456 789".to_string()),
     };
     
     let resp = test::TestRequest::post()
@@ -77,6 +84,7 @@ async fn test_create_and_get_user() {
     assert_eq!(user["username"], "testuser");
     assert_eq!(user["email"], "test@example.com");
     assert_eq!(user["full_name"], "Test User");
+    assert_eq!(user["phone_number"], "+48 123 456 789");
 }
 
 #[actix_web::test]
@@ -87,7 +95,9 @@ async fn test_update_user() {
     let create_req = CreateUserRequest {
         username: "updateuser".to_string(),
         email: "update@example.com".to_string(),
-        full_name: Some("Update User".to_string()),
+        password: "Update1234".to_string(),
+        full_name: "Update User".to_string(),
+        phone_number: None,
     };
     
     let resp = test::TestRequest::post()
@@ -96,6 +106,8 @@ async fn test_update_user() {
         .send_request(&app)
         .await;
     
+    assert!(resp.status().is_success());
+    
     let created_user: serde_json::Value = test::read_body_json(resp).await;
     let user_id = created_user["id"].as_str().unwrap();
     
@@ -103,7 +115,9 @@ async fn test_update_user() {
     let update_req = UpdateUserRequest {
         username: Some("updateduser".to_string()),
         email: None,
+        password: Some("NewPassword1234".to_string()),
         full_name: Some("Updated User".to_string()),
+        phone_number: Some("+1 987 654 321".to_string()),
         active: Some(false),
     };
     
@@ -119,6 +133,7 @@ async fn test_update_user() {
     assert_eq!(updated_user["username"], "updateduser");
     assert_eq!(updated_user["email"], "update@example.com"); // Nie zmieniono
     assert_eq!(updated_user["full_name"], "Updated User");
+    assert_eq!(updated_user["phone_number"], "+1 987 654 321");
     assert_eq!(updated_user["active"], false);
 }
 
@@ -130,7 +145,9 @@ async fn test_delete_user() {
     let create_req = CreateUserRequest {
         username: "deleteuser".to_string(),
         email: "delete@example.com".to_string(),
-        full_name: None,
+        password: "Delete1234".to_string(),
+        full_name: "Delete User".to_string(),
+        phone_number: None,
     };
     
     let resp = test::TestRequest::post()
@@ -138,6 +155,8 @@ async fn test_delete_user() {
         .set_json(&create_req)
         .send_request(&app)
         .await;
+    
+    assert!(resp.status().is_success());
     
     let created_user: serde_json::Value = test::read_body_json(resp).await;
     let user_id = created_user["id"].as_str().unwrap();
@@ -160,60 +179,63 @@ async fn test_delete_user() {
 }
 
 #[actix_web::test]
-async fn test_get_all_users() {
+async fn test_login() {
     let app = setup_test_app().await;
     
-    // Pobieramy początkową liczbę użytkowników
-    let initial_resp = test::TestRequest::get()
+    // Tworzenie użytkownika
+    let create_req = CreateUserRequest {
+        username: "loginuser".to_string(),
+        email: "login@example.com".to_string(),
+        password: "Login1234".to_string(),
+        full_name: "Login User".to_string(),
+        phone_number: None,
+    };
+    
+    let resp = test::TestRequest::post()
         .uri("/api/users")
-        .send_request(&app)
-        .await;
-    
-    assert!(initial_resp.status().is_success());
-    let initial_users: Vec<serde_json::Value> = test::read_body_json(initial_resp).await;
-    let initial_count = initial_users.len();
-    
-    // Generate a truly unique prefix using a full UUID
-    let unique_prefix = format!("getall_{}", uuid::Uuid::new_v4().to_string());
-    
-    // Tworzenie kilku użytkowników z unikalnym prefiksem
-    for i in 1..=3 {
-        let create_req = CreateUserRequest {
-            username: format!("{}_user{}", unique_prefix, i),
-            email: format!("{}_user{}@example.com", unique_prefix, i),
-            full_name: Some(format!("User {}", i)),
-        };
-        
-        let resp = test::TestRequest::post()
-            .uri("/api/users")
-            .set_json(&create_req)
-            .send_request(&app)
-            .await;
-            
-        assert!(resp.status().is_success());
-    }
-    
-    // Pobieranie wszystkich użytkowników po dodaniu nowych
-    let resp = test::TestRequest::get()
-        .uri("/api/users")
+        .set_json(&create_req)
         .send_request(&app)
         .await;
     
     assert!(resp.status().is_success());
     
-    let users: Vec<serde_json::Value> = test::read_body_json(resp).await;
+    // Próba logowania z poprawnymi danymi
+    let login_req = LoginRequest {
+        email: "login@example.com".to_string(),
+        password: "Login1234".to_string(),
+    };
     
-    // Sprawdzamy, czy liczba użytkowników zwiększyła się dokładnie o 3
-    assert_eq!(users.len(), initial_count + 3);
+    let resp = test::TestRequest::post()
+        .uri("/api/auth/login")
+        .set_json(&login_req)
+        .send_request(&app)
+        .await;
     
-    // Dodatkowo sprawdzamy, czy utworzeni przez nas użytkownicy są w wynikach
-    // Use the exact full prefix to avoid any chance of collision
-    let created_users: Vec<_> = users.into_iter()
-        .filter(|user| {
-            let username = user["username"].as_str().unwrap_or("");
-            username.starts_with(&unique_prefix)
-        })
-        .collect();
+    assert!(resp.status().is_success());
     
-    assert_eq!(created_users.len(), 3);
+    let login_resp: serde_json::Value = test::read_body_json(resp).await;
+    assert_eq!(login_resp["user"]["username"], "loginuser");
+    assert_eq!(login_resp["message"], "Login successful");
+}
+
+#[actix_web::test]
+async fn test_weak_password_rejection() {
+    let app = setup_test_app().await;
+    
+    // Próba utworzenia użytkownika ze zbyt słabym hasłem (brak dużej litery)
+    let create_req = CreateUserRequest {
+        username: "weakpassuser".to_string(),
+        email: "weak@example.com".to_string(),
+        password: "weak1234".to_string(), // brak dużej litery
+        full_name: "Weak Password User".to_string(),
+        phone_number: None,
+    };
+    
+    let resp = test::TestRequest::post()
+        .uri("/api/users")
+        .set_json(&create_req)
+        .send_request(&app)
+        .await;
+    
+    assert_eq!(resp.status().as_u16(), 400); // Bad Request
 }

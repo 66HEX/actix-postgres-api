@@ -3,6 +3,7 @@ mod error;
 mod handlers;
 mod models;
 mod repository;
+mod auth_utils;  // Nowy moduł dla funkcji hashowania haseł
 
 use actix_web::{middleware, web, App, HttpServer};
 use dotenv::dotenv;
@@ -10,7 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use log::info;
 
 use crate::config::Config;
-use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user};
+use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -44,6 +45,10 @@ async fn main() -> std::io::Result<()> {
                             .route("/{id}", web::get().to(get_user_by_id))
                             .route("/{id}", web::put().to(update_user))
                             .route("/{id}", web::delete().to(delete_user))
+                    )
+                    .service(
+                        web::scope("/auth")
+                            .route("/login", web::post().to(login))
                     )
             )
     })
