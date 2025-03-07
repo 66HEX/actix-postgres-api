@@ -1,8 +1,8 @@
 use actix_web::{test, web, App};
 use sqlx::postgres::PgPoolOptions;
-use user_crud_api::config::Config;
-use user_crud_api::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
-use user_crud_api::models::{CreateUserRequest, UpdateUserRequest, LoginRequest};
+use actix_postgres_api::config::Config;
+use actix_postgres_api::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
+use actix_postgres_api::models::{CreateUserRequest, UpdateUserRequest, LoginRequest};
 
 // Przygotowanie środowiska testowego
 async fn setup_test_app() -> impl actix_web::dev::Service<
@@ -11,7 +11,7 @@ async fn setup_test_app() -> impl actix_web::dev::Service<
     Error = actix_web::Error,
 > {
     // Ustawienie URL do bazy testowej
-    std::env::set_var("DATABASE_URL", "postgres://postgres:admin@localhost/user_crud_test?sslmode=prefer");
+    std::env::set_var("DATABASE_URL", "postgres://postgres:admin@localhost/actix_postgres_api_test?sslmode=prefer");
     
     let config = Config::from_env().expect("Failed to load configuration");
     let pool = PgPoolOptions::new()
