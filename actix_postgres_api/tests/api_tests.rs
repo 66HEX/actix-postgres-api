@@ -59,6 +59,7 @@ async fn test_create_and_get_user() {
         password: "Test1234".to_string(),
         full_name: "Test User".to_string(),
         phone_number: Some("+48 123 456 789".to_string()),
+        role: None,  // Default CLIENT
     };
     
     let resp = test::TestRequest::post()
@@ -85,10 +86,72 @@ async fn test_create_and_get_user() {
     assert_eq!(user["email"], "test@example.com");
     assert_eq!(user["full_name"], "Test User");
     assert_eq!(user["phone_number"], "+48 123 456 789");
+    assert_eq!(user["role"], "client");  // Default role
 }
 
 #[actix_web::test]
-async fn test_update_user() {
+async fn test_create_trainer_user() {
+    let app = setup_test_app().await;
+    
+    // Tworzenie użytkownika-trenera
+    let create_req = CreateUserRequest {
+        username: "traineruser".to_string(),
+        email: "trainer@example.com".to_string(),
+        password: "Trainer1234".to_string(),
+        full_name: "Trainer User".to_string(),
+        phone_number: Some("+48 987 654 321".to_string()),
+        role: Some("trainer".to_string()),
+    };
+    
+    let resp = test::TestRequest::post()
+        .uri("/api/users")
+        .set_json(&create_req)
+        .send_request(&app)
+        .await;
+    
+    assert!(resp.status().is_success());
+    
+    let created_user: serde_json::Value = test::read_body_json(resp).await;
+    let user_id = created_user["id"].as_str().unwrap();
+    
+    // Pobieranie utworzonego użytkownika
+    let resp = test::TestRequest::get()
+        .uri(&format!("/api/users/{}", user_id))
+        .send_request(&app)
+        .await;
+    
+    assert!(resp.status().is_success());
+    
+    let user: serde_json::Value = test::read_body_json(resp).await;
+    assert_eq!(user["username"], "traineruser");
+    assert_eq!(user["role"], "trainer");  // Should be trainer
+}
+
+#[actix_web::test]
+async fn test_reject_invalid_role() {
+    let app = setup_test_app().await;
+    
+    // Próba utworzenia użytkownika z nieprawidłową rolą
+    let create_req = CreateUserRequest {
+        username: "invalidrole".to_string(),
+        email: "invalid@example.com".to_string(),
+        password: "Invalid1234".to_string(),
+        full_name: "Invalid Role".to_string(),
+        phone_number: None,
+        role: Some("admin".to_string()),  // Invalid role
+    };
+    
+    let resp = test::TestRequest::post()
+        .uri("/api/users")
+        .set_json(&create_req)
+        .send_request(&app)
+        .await;
+    
+    assert_eq!(resp.status().as_u16(), 400); // Bad Request
+}
+
+#[actix_web::test]
+async fn test_update_user_role() {
     let app = setup_test_app().await;
     
     // Tworzenie użytkownika
@@ -98,6 +161,55 @@ async fn test_update_user() {
         password: "Update1234".to_string(),
         full_name: "Update User".to_string(),
         phone_number: None,
+        role: None,  // Default CLIENT
+    };
+    
+    let resp = test::TestRequest::post()
+        .uri("/api/users")
+        .set_json(&create_req)
+        .send_request(&app)
+        .await;
+    
+    assert!(resp.status().is_success());
+    
+    let created_user: serde_json::Value = test::read_body_json(resp).await;
+    let user_id = created_user["id"].as_str().unwrap();
+    
+    // Aktualizacja roli użytkownika na TRAINER
+    let update_req = UpdateUserRequest {
+        username: None,
+        email: None,
+        password: None,
+        full_name: None,
+        phone_number: None,
+        active: None,
+        role: Some("trainer".to_string()),
+    };
+    
+    let resp = test::TestRequest::put()
+        .uri(&format!("/api/users/{}", user_id))
+        .set_json(&update_req)
+        .send_request(&app)
+        .await;
+    
+    assert!(resp.status().is_success());
+    
+    let updated_user: serde_json::Value = test::read_body_json(resp).await;
+    assert_eq!(updated_user["role"], "trainer");
+}
+
+#[actix_web::test]
+async fn test_update_user() {
+    let app = setup_test_app().await;
+    
+    // Tworzenie użytkownika
+    let create_req = CreateUserRequest {
+        username: "updateuser2".to_string(),
+        email: "update2@example.com".to_string(),
+        password: "Update1234".to_string(),
+        full_name: "Update User".to_string(),
+        phone_number: None,
+        role: None,  // Default CLIENT
     };
     
     let resp = test::TestRequest::post()
@@ -113,12 +225,13 @@ async fn test_update_user() {
     
     // Aktualizacja użytkownika
     let update_req = UpdateUserRequest {
-        username: Some("updateduser".to_string()),
+        username: Some("updateduser2".to_string()),
         email: None,
         password: Some("NewPassword1234".to_string()),
         full_name: Some("Updated User".to_string()),
         phone_number: Some("+1 987 654 321".to_string()),
         active: Some(false),
+        role: None,  // Bez zmiany roli
     };
     
     let resp = test::TestRequest::put()
@@ -130,11 +243,12 @@ async fn test_update_user() {
     assert!(resp.status().is_success());
     
     let updated_user: serde_json::Value = test::read_body_json(resp).await;
-    assert_eq!(updated_user["username"], "updateduser");
-    assert_eq!(updated_user["email"], "update@example.com"); // Nie zmieniono
+    assert_eq!(updated_user["username"], "updateduser2");
+    assert_eq!(updated_user["email"], "update2@example.com"); // Nie zmieniono
     assert_eq!(updated_user["full_name"], "Updated User");
     assert_eq!(updated_user["phone_number"], "+1 987 654 321");
     assert_eq!(updated_user["active"], false);
+    assert_eq!(updated_user["role"], "client");  // Rola pozostała bez zmian
 }
 
 #[actix_web::test]
@@ -148,6 +262,7 @@ async fn test_delete_user() {
         password: "Delete1234".to_string(),
         full_name: "Delete User".to_string(),
         phone_number: None,
+        role: Some("client".to_string()),
     };
     
     let resp = test::TestRequest::post()
@@ -189,6 +304,7 @@ async fn test_login() {
         password: "Login1234".to_string(),
         full_name: "Login User".to_string(),
         phone_number: None,
+        role: Some("trainer".to_string()), // Ustawiamy rolę trainer
     };
     
     let resp = test::TestRequest::post()
@@ -215,6 +331,7 @@ async fn test_login() {
     
     let login_resp: serde_json::Value = test::read_body_json(resp).await;
     assert_eq!(login_resp["user"]["username"], "loginuser");
+    assert_eq!(login_resp["user"]["role"], "trainer"); // Sprawdzamy czy rola trainer jest zwracana
     assert_eq!(login_resp["message"], "Login successful");
 }
 
@@ -229,6 +346,7 @@ async fn test_weak_password_rejection() {
         password: "weak1234".to_string(), // brak dużej litery
         full_name: "Weak Password User".to_string(),
         phone_number: None,
+        role: None,
     };
     
     let resp = test::TestRequest::post()

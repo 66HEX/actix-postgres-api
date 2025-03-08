@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, UpdateUserRequest, User, LoginRequest};
+use crate::models::{CreateUserRequest, UpdateUserRequest, User, LoginRequest, UserRole};
 use crate::auth_utils::{hash_password, verify_password};
 use sqlx::{postgres::PgPool, types::Uuid};
 
@@ -51,10 +51,22 @@ impl UserRepository {
         // Hashuj hasło przed zapisaniem
         let password_hash = hash_password(&user.password)?;
         
+        // Ustaw domyślną rolę client, jeśli nie podano
+        let role = match user.role {
+            Some(role) => {
+                // Walidacja roli
+                match role.to_lowercase().as_str() {
+                    "client" | "trainer" => role.to_lowercase(),
+                    _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
+                }
+            },
+            None => "client".to_string()
+        };
+        
         let user = sqlx::query_as::<_, User>(
             r#"
-            INSERT INTO users (username, email, password_hash, full_name, phone_number)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO users (username, email, password_hash, full_name, phone_number, role)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#
         )
@@ -63,6 +75,7 @@ impl UserRepository {
         .bind(&password_hash)
         .bind(&user.full_name)
         .bind(&user.phone_number)
+        .bind(&role)
         .fetch_one(&self.pool)
         .await
         .map_err(AppError::DatabaseError)?;
@@ -81,6 +94,17 @@ impl UserRepository {
         let phone_number = user.phone_number.or(existing.phone_number);
         let active = user.active.unwrap_or(existing.active);
         
+        // Walidacja i aktualizacja roli, jeśli podano
+        let role = match user.role {
+            Some(role) => {
+                match role.to_lowercase().as_str() {
+                    "client" | "trainer" => role.to_lowercase(),
+                    _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
+                }
+            },
+            None => existing.role
+        };
+        
         // Aktualizacja hasła tylko jeśli podano nowe
         let password_hash = match user.password {
             Some(new_password) => hash_password(&new_password)?,
@@ -91,8 +115,8 @@ impl UserRepository {
             r#"
             UPDATE users
             SET username = $1, email = $2, password_hash = $3, full_name = $4, 
-                phone_number = $5, active = $6, updated_at = NOW()
-            WHERE id = $7
+                phone_number = $5, active = $6, role = $7, updated_at = NOW()
+            WHERE id = $8
             RETURNING *
             "#
         )
@@ -102,6 +126,7 @@ impl UserRepository {
         .bind(&full_name)
         .bind(&phone_number)
         .bind(&active)
+        .bind(&role)
         .bind(id)
         .fetch_one(&self.pool)
         .await

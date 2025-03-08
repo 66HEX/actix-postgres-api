@@ -30,6 +30,7 @@ Authentication endpoints:
 │   ├── 20250306220539_create_users_table.sql
 │   └── 20250307212522_add_phone_number_and_required_full_name.sql
 │   └── 20250307215355_add_password_support.sql
+│   └── 20250308143333_add_user_role.sql.sql
 ├── src/
 │   ├── config.rs                          # Application configuration
 │   ├── error.rs                           # Error handling
@@ -54,13 +55,13 @@ Authentication endpoints:
 
 ```bash
 # Create the database
-psql -U postgres -c "CREATE DATABASE user_crud"
+psql -U postgres -c "CREATE DATABASE actix_postgres_api"
 
 # Create the pgcrypto extension (needed for gen_random_uuid())
-psql -U postgres -d user_crud -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+psql -U postgres -d actix_postgres_api -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
 # Create the users table
-psql -U postgres -d user_crud -c "CREATE TABLE users (
+psql -U postgres -d actix_postgres_api -c "CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -98,13 +99,13 @@ The application will be available at `http://127.0.0.1:8080/api/users`.
 
 ```bash
 # Create test database
-psql -U postgres -c "CREATE DATABASE user_crud_test"
+psql -U postgres -c "CREATE DATABASE actix_postgres_api_test"
 
 # Create the pgcrypto extension
-psql -U postgres -d user_crud_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+psql -U postgres -d actix_postgres_api_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
 # Create the table in the test database
-psql -U postgres -d user_crud_test -c "CREATE TABLE users (
+psql -U postgres -d actix_postgres_api_test -c "CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,

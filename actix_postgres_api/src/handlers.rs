@@ -3,7 +3,7 @@ use sqlx::{postgres::PgPool, types::Uuid};
 use uuid::Uuid as UuidTrait;
 
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, UpdateUserRequest, UserResponse, LoginRequest, LoginResponse};
+use crate::models::{CreateUserRequest, UpdateUserRequest, UserResponse, LoginRequest, LoginResponse, UserRole};
 use crate::repository::UserRepository;
 use crate::auth_utils::validate_password;
 
@@ -52,6 +52,14 @@ pub async fn create_user(
     if let Some(ref phone) = user.phone_number {
         if !phone.chars().all(|c| c.is_digit(10) || c == '+' || c == ' ' || c == '-') {
             return Err(AppError::ValidationError("Invalid phone number format".to_string()));
+        }
+    }
+    
+    // Walidacja roli, jeśli podano
+    if let Some(ref role) = user.role {
+        match role.to_lowercase().as_str() {
+            "client" | "trainer" => {},
+            _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
         }
     }
     
@@ -152,6 +160,14 @@ pub async fn update_user(
     if let Some(ref phone) = user.phone_number {
         if !phone.chars().all(|c| c.is_digit(10) || c == '+' || c == ' ' || c == '-') {
             return Err(AppError::ValidationError("Invalid phone number format".to_string()));
+        }
+    }
+    
+    // Walidacja roli, jeśli jest aktualizowana
+    if let Some(ref role) = user.role {
+        match role.to_lowercase().as_str() {
+            "client" | "trainer" => {},
+            _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
         }
     }
     
