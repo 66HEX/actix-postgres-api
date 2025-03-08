@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use crate::models::{CreateUserRequest, UpdateUserRequest, User, LoginRequest, UserRole};
-use crate::auth_utils::{hash_password, verify_password};
+use crate::auth_utils::{hash_password, verify_password, validate_role};
 use sqlx::{postgres::PgPool, types::Uuid};
 
 pub struct UserRepository {
@@ -53,13 +53,7 @@ impl UserRepository {
         
         // Ustaw domyślną rolę client, jeśli nie podano
         let role = match user.role {
-            Some(role) => {
-                // Walidacja roli
-                match role.to_lowercase().as_str() {
-                    "client" | "trainer" => role.to_lowercase(),
-                    _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
-                }
-            },
+            Some(role) => role,
             None => "client".to_string()
         };
         
@@ -93,17 +87,7 @@ impl UserRepository {
         let full_name = user.full_name.unwrap_or(existing.full_name);
         let phone_number = user.phone_number.or(existing.phone_number);
         let active = user.active.unwrap_or(existing.active);
-        
-        // Walidacja i aktualizacja roli, jeśli podano
-        let role = match user.role {
-            Some(role) => {
-                match role.to_lowercase().as_str() {
-                    "client" | "trainer" => role.to_lowercase(),
-                    _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
-                }
-            },
-            None => existing.role
-        };
+        let role = user.role.unwrap_or(existing.role);
         
         // Aktualizacja hasła tylko jeśli podano nowe
         let password_hash = match user.password {
@@ -165,5 +149,21 @@ impl UserRepository {
         }
         
         Ok(user)
+    }
+    
+    // Nowa metoda do filtrowania użytkowników wg roli
+    pub async fn find_by_role(&self, role: &str) -> Result<Vec<User>, AppError> {
+        // Waliduj rolę
+        let valid_role = validate_role(role)?;
+        
+        let users = sqlx::query_as::<_, User>(
+            "SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC"
+        )
+        .bind(valid_role)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(AppError::DatabaseError)?;
+        
+        Ok(users)
     }
 }

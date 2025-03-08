@@ -5,7 +5,10 @@ use uuid::Uuid as UuidTrait;
 use crate::error::AppError;
 use crate::models::{CreateUserRequest, UpdateUserRequest, UserResponse, LoginRequest, LoginResponse, UserRole};
 use crate::repository::UserRepository;
-use crate::auth_utils::validate_password;
+use crate::auth_utils::{
+    validate_password, validate_email, validate_phone_number, 
+    validate_username, validate_full_name, validate_role
+};
 
 pub async fn get_all_users(db_pool: web::Data<PgPool>) -> Result<HttpResponse, AppError> {
     let repo = UserRepository::new(db_pool.get_ref().clone());
@@ -32,36 +35,28 @@ pub async fn create_user(
     user: web::Json<CreateUserRequest>,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, AppError> {
-    // Walidacja danych wejściowych
-    if user.username.is_empty() {
-        return Err(AppError::ValidationError("Username cannot be empty".to_string()));
-    }
+    // Walidacja nazwy użytkownika
+    validate_username(&user.username)?;
     
-    if user.email.is_empty() || !user.email.contains('@') {
-        return Err(AppError::ValidationError("Invalid email address".to_string()));
-    }
+    // Walidacja adresu email
+    validate_email(&user.email)?;
     
-    if user.full_name.is_empty() {
-        return Err(AppError::ValidationError("Full name cannot be empty".to_string()));
-    }
+    // Walidacja pełnego imienia i nazwiska
+    validate_full_name(&user.full_name)?;
     
     // Walidacja hasła
     validate_password(&user.password)?;
     
-    // Validate phone number if provided (simple check)
+    // Validate phone number if provided
     if let Some(ref phone) = user.phone_number {
-        if !phone.chars().all(|c| c.is_digit(10) || c == '+' || c == ' ' || c == '-') {
-            return Err(AppError::ValidationError("Invalid phone number format".to_string()));
-        }
+        validate_phone_number(phone)?;
     }
     
     // Walidacja roli, jeśli podano
-    if let Some(ref role) = user.role {
-        match role.to_lowercase().as_str() {
-            "client" | "trainer" => {},
-            _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
-        }
-    }
+    let role = match &user.role {
+        Some(role) => Some(validate_role(role)?),
+        None => None
+    };
     
     let repo = UserRepository::new(db_pool.get_ref().clone());
     
@@ -89,7 +84,13 @@ pub async fn create_user(
         return Err(AppError::ValidationError("Username is already in use".to_string()));
     }
     
-    let created_user = repo.create(user.into_inner()).await?;
+    // Jeśli walidacja roli zmieniła jej wartość, stwórz nowy obiekt z zaktualizowaną rolą
+    let mut user_data = user.into_inner();
+    if let Some(validated_role) = role {
+        user_data.role = Some(validated_role);
+    }
+    
+    let created_user = repo.create(user_data).await?;
     
     Ok(HttpResponse::Created().json(UserResponse::from(created_user)))
 }
@@ -104,9 +105,7 @@ pub async fn update_user(
     
     // Walidacja danych wejściowych
     if let Some(ref email) = user.email {
-        if email.is_empty() || !email.contains('@') {
-            return Err(AppError::ValidationError("Invalid email address".to_string()));
-        }
+        validate_email(email)?;
         
         // Sprawdź, czy nowy email nie koliduje z istniejącym
         let email_exists = sqlx::query!(
@@ -125,9 +124,7 @@ pub async fn update_user(
     }
     
     if let Some(ref username) = user.username {
-        if username.is_empty() {
-            return Err(AppError::ValidationError("Username cannot be empty".to_string()));
-        }
+        validate_username(username)?;
         
         // Sprawdź, czy nowa nazwa użytkownika nie koliduje z istniejącą
         let username_exists = sqlx::query!(
@@ -146,9 +143,7 @@ pub async fn update_user(
     }
     
     if let Some(ref full_name) = user.full_name {
-        if full_name.is_empty() {
-            return Err(AppError::ValidationError("Full name cannot be empty".to_string()));
-        }
+        validate_full_name(full_name)?;
     }
     
     // Walidacja hasła, jeśli jest aktualizowane
@@ -158,21 +153,17 @@ pub async fn update_user(
     
     // Validate phone number if provided
     if let Some(ref phone) = user.phone_number {
-        if !phone.chars().all(|c| c.is_digit(10) || c == '+' || c == ' ' || c == '-') {
-            return Err(AppError::ValidationError("Invalid phone number format".to_string()));
-        }
+        validate_phone_number(phone)?;
     }
     
     // Walidacja roli, jeśli jest aktualizowana
-    if let Some(ref role) = user.role {
-        match role.to_lowercase().as_str() {
-            "client" | "trainer" => {},
-            _ => return Err(AppError::ValidationError("Invalid role. Must be client or trainer".to_string()))
-        }
+    let mut user_data = user.into_inner();
+    if let Some(ref role) = user_data.role {
+        user_data.role = Some(validate_role(role)?);
     }
     
     let repo = UserRepository::new(db_pool.get_ref().clone());
-    let updated_user = repo.update(user_id, user.into_inner()).await?;
+    let updated_user = repo.update(user_id, user_data).await?;
     
     Ok(HttpResponse::Ok().json(UserResponse::from(updated_user)))
 }
@@ -194,6 +185,13 @@ pub async fn login(
     login: web::Json<LoginRequest>,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, AppError> {
+    // Walidacja danych logowania
+    validate_email(&login.email)?;
+    
+    if login.password.is_empty() {
+        return Err(AppError::ValidationError("Password cannot be empty".to_string()));
+    }
+    
     let repo = UserRepository::new(db_pool.get_ref().clone());
     
     // Authenticate user

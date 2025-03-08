@@ -5,13 +5,29 @@ mod models;
 mod repository;
 mod auth_utils;  // Nowy moduł dla funkcji hashowania haseł
 
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer, HttpResponse};
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use log::info;
 
 use crate::config::Config;
 use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
+use crate::repository::UserRepository;
+use crate::error::AppError;
+
+// Nowy handler do filtrowania użytkowników wg roli
+async fn get_users_by_role(
+    role: web::Path<String>,
+    db_pool: web::Data<sqlx::PgPool>,
+) -> Result<HttpResponse, AppError> {
+    let repo = UserRepository::new(db_pool.get_ref().clone());
+    let users = repo.find_by_role(&role).await?;
+    
+    let response: Vec<crate::models::UserResponse> = 
+        users.into_iter().map(crate::models::UserResponse::from).collect();
+    
+    Ok(HttpResponse::Ok().json(response))
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,6 +58,7 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/users")
                             .route("", web::get().to(get_all_users))
                             .route("", web::post().to(create_user))
+                            .route("/role/{role}", web::get().to(get_users_by_role)) // Nowy endpoint
                             .route("/{id}", web::get().to(get_user_by_id))
                             .route("/{id}", web::put().to(update_user))
                             .route("/{id}", web::delete().to(delete_user))

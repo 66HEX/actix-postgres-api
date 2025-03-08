@@ -5,6 +5,7 @@ A complete RESTful API backend for user management and authentication, built wit
 - **PostgreSQL** as the database
 - **SQLx** as the asynchronous database access library
 - **bcrypt** for secure password hashing
+- **regex** for enhanced input validation
 
 ## Functionality
 
@@ -12,6 +13,7 @@ The API supports standard CRUD (Create, Read, Update, Delete) operations on the 
 
 - **Create users** - `POST /api/users`
 - **Retrieve list of users** - `GET /api/users`
+- **Retrieve users by role** - `GET /api/users/role/{role}`
 - **Retrieve a single user** - `GET /api/users/{id}`
 - **Update a user** - `PUT /api/users/{id}`
 - **Delete a user** - `DELETE /api/users/{id}`
@@ -68,9 +70,11 @@ psql -U postgres -d actix_postgres_api -c "CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL DEFAULT '$2a$12$k8Y6Nt5zfQXmGO9VvQH2CehxfMY0lPuqJxzAkrxoHSJRZz8obzg4W',
     full_name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
+    role VARCHAR(20) NOT NULL DEFAULT 'client',
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT check_valid_role CHECK (role IN ('client', 'trainer'))
 );"
 ```
 
@@ -112,9 +116,11 @@ psql -U postgres -d actix_postgres_api_test -c "CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL DEFAULT '$2a$12$k8Y6Nt5zfQXmGO9VvQH2CehxfMY0lPuqJxzAkrxoHSJRZz8obzg4W',
     full_name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
+    role VARCHAR(20) NOT NULL DEFAULT 'client',
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT check_valid_role CHECK (role IN ('client', 'trainer'))
 );"
 
 # Run tests
@@ -128,7 +134,15 @@ cargo test
 ```bash
 curl -X POST http://localhost:8080/api/users \
   -H "Content-Type: application/json" \
-  -d '{"username":"jsmith","email":"john.smith@example.com","password":"SecurePass123","full_name":"John Smith","phone_number":"+1 234 567 890"}'
+  -d '{"username":"jsmith","email":"john.smith@example.com","password":"SecurePass123","full_name":"John Smith","phone_number":"+1 234 567 890","role":"client"}'
+```
+
+### Creating a Trainer User
+
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"mcoach","email":"mike.coach@example.com","password":"SecurePass123","full_name":"Mike Coach","phone_number":"+1 234 567 891","role":"trainer"}'
 ```
 
 ### Retrieving All Users
@@ -149,6 +163,14 @@ curl http://localhost:8080/api/users/{id}
 curl -X PUT http://localhost:8080/api/users/{id} \
   -H "Content-Type: application/json" \
   -d '{"email":"new.email@example.com","active":false,"phone_number":"+1 987 654 321"}'
+```
+
+### Updating User Role
+
+```bash
+curl -X PUT http://localhost:8080/api/users/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"role":"trainer"}'
 ```
 
 ### Updating User Password
@@ -183,9 +205,18 @@ The `User` entity contains the following fields:
 - `password_hash` - bcrypt hashed password (not exposed via API)
 - `full_name` - user's full name (required)
 - `phone_number` - optional phone number
+- `role` - user role: "client" (default) or "trainer"
 - `active` - user activity status (default `true`)
 - `created_at` - record creation timestamp
 - `updated_at` - record last update timestamp
+
+## User Roles
+
+The API supports two user roles:
+- `client` - regular gym client/member (default)
+- `trainer` - gym trainer/coach
+
+When creating or updating a user, the role can be specified. If not provided during user creation, the default role is "client".
 
 ## Password Requirements
 
@@ -213,8 +244,9 @@ The API returns appropriate HTTP status codes and error messages in JSON format:
 ## Future Development
 
 - ✅ Authentication (implemented)
+- ✅ User roles (implemented)
+- ✅ Enhanced input validation (implemented)
 - Authorization with role-based access control
 - Data pagination
-- Enhanced input validation
 - Logging and monitoring
 - API documentation integration (e.g., Swagger)
