@@ -41,7 +41,10 @@ Authentication endpoints:
 │   ├── main.rs                            # Application entry point
 │   ├── models.rs                          # Data models
 │   ├── repository.rs                      # Data access layer
-│   └── auth_utils.rs                      # Authentication utilities
+│   ├── auth_utils.rs                      # Authentication utilities
+│   ├── monitoring.rs                      # Performance monitoring tools
+│   ├── logging.rs                         # Enhanced logging system
+│   └── middleware.rs                      # Custom middleware components
 └── tests/
     └── api_tests.rs                       # API integration tests
 ```
@@ -87,6 +90,7 @@ DATABASE_URL=postgres://postgres:password@localhost/user_crud?sslmode=prefer
 HOST=127.0.0.1
 PORT=8080
 DB_MAX_CONNECTIONS=5
+RUST_LOG=actix_postgres_api=info,actix_web=info,sqlx=warn
 ```
 
 Adjust the connection parameters to match your PostgreSQL configuration.
@@ -234,6 +238,45 @@ The API returns appropriate HTTP status codes and error messages in JSON format:
 - `404 Not Found` - resource not found
 - `500 Internal Server Error` - server-side error
 
+## Monitoring and Logging
+
+The application includes advanced performance monitoring and extended logging capabilities:
+
+### Performance Monitoring:
+- Prometheus metrics accessible at `/metrics` endpoint
+- HTTP request timing and throughput metrics
+- Database query performance tracking
+- Memory usage monitoring
+- Active connections counter
+- Request/response status code tracking
+
+### Extended Logging:
+- Structured JSON logging
+- Request lifecycle tracing with unique IDs
+- Database operation detailed logging
+- Error context enrichment
+- Configurable log levels via environment variables
+
+### Configuration:
+Log levels can be set via environment variables:
+```
+RUST_LOG=actix_postgres_api=debug,actix_web=info,sqlx=warn
+```
+
+### Available Metrics:
+- `api_http_requests_total` - Count of HTTP requests by method, path, and status
+- `api_http_request_duration_seconds` - HTTP request duration histograms
+- `api_db_queries_total` - Count of database operations by type and table
+- `api_db_query_duration_seconds` - Database operation duration histograms
+- `api_active_connections` - Current number of active HTTP connections
+- `api_memory_usage_bytes` - Current memory usage of the application
+
+### Health Check:
+A health check endpoint is available at `/health`, providing basic information about the application status.
+
+### Testing:
+The monitoring and logging features are covered by integration tests in `api_tests.rs`, which verify the correctness of metrics collection and health endpoint functionality.
+
 ## Performance and Scalability
 
 - Asynchronous request processing powered by Actix Web
@@ -246,7 +289,8 @@ The API returns appropriate HTTP status codes and error messages in JSON format:
 - ✅ Authentication (implemented)
 - ✅ User roles (implemented)
 - ✅ Enhanced input validation (implemented)
+- ✅ Performance monitoring (implemented)
+- ✅ Extended logging (implemented)
 - Authorization with role-based access control
 - Data pagination
-- Logging and monitoring
 - API documentation integration (e.g., Swagger)

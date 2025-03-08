@@ -4,3 +4,6 @@ pub mod handlers;
 pub mod models;
 pub mod repository;
 pub mod auth_utils;
+pub mod monitoring;  // New monitoring module
+pub mod logging;     // New logging module
+pub mod middleware;  // New middleware module
