@@ -10,17 +10,19 @@ mod middleware;  // New middleware module
 mod services;    // New services module
 
 use actix_web::{middleware::Logger, web, App, HttpServer, HttpResponse};
-use actix_web_prom::{PrometheusMetricsBuilder, PrometheusMetrics};
+use actix_web_prom::PrometheusMetricsBuilder;
 use dotenv::dotenv;
-use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 use tokio::task;
 use tokio::time;
 use tracing_actix_web::TracingLogger;
 
 use crate::config::Config;
-use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role};
+use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role, get_user_statistics};
+// These imports are kept for potential future use
+#[allow(unused_imports)]
 use crate::database::user::UserRepository;
+#[allow(unused_imports)]
 use crate::error::AppError;
 use crate::logging::init_logging;
 use crate::middleware::{CustomRootSpanBuilder, PerformanceMetrics};
@@ -100,6 +102,7 @@ async fn main() -> std::io::Result<()> {
                             .route("", web::get().to(get_all_users))
                             .route("", web::post().to(create_user))
                             .route("/role/{role}", web::get().to(get_users_by_role))
+                            .route("/statistics", web::get().to(get_user_statistics))
                             .route("/{id}", web::get().to(get_user_by_id))
                             .route("/{id}", web::put().to(update_user))
                             .route("/{id}", web::delete().to(delete_user))

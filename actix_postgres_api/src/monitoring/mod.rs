@@ -3,6 +3,13 @@ pub mod metrics;
 pub mod memory;
 
 // Re-export commonly used items
-pub use metrics::{HTTP_REQUEST_COUNTER, HTTP_REQUEST_DURATION, DB_QUERY_COUNTER, DB_QUERY_DURATION, ACTIVE_CONNECTIONS};
+// HTTP metrics used in middleware and handlers
+pub use metrics::{HTTP_REQUEST_COUNTER, HTTP_REQUEST_DURATION, ACTIVE_CONNECTIONS};
+// Database metrics for future query monitoring
+#[allow(unused_imports)]
+pub use metrics::{DB_QUERY_COUNTER, DB_QUERY_DURATION};
 pub use metrics::{Timer, DbMetrics};
-pub use memory::{MEMORY_USAGE, update_memory_usage};
+// Memory metrics for system monitoring
+#[allow(unused_imports)]
+pub use memory::MEMORY_USAGE;
+pub use memory::update_memory_usage;

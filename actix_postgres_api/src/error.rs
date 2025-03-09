@@ -1,7 +1,6 @@
 use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use serde::Serialize;
 use sqlx::error::Error as SqlxError;
-use std::fmt;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use sqlx::postgres::PgPool;
 
 use crate::error::AppError;
-use crate::models::{LoginRequest, LoginResponse, UserResponse};
+use crate::models::{LoginRequest, LoginResponse};
 use crate::services::AuthService;
 
 pub async fn login(

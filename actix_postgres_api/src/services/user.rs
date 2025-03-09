@@ -1,8 +1,8 @@
-use sqlx::{postgres::PgPool, types::Uuid};
+use sqlx::postgres::PgPool;
 use uuid::Uuid as UuidTrait;
 
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, UpdateUserRequest, User, UserResponse};
+use crate::models::{CreateUserRequest, UpdateUserRequest, User};
 use crate::database::user::UserRepository;
 use crate::auth_utils::{validate_password, validate_email, validate_phone_number, validate_username, validate_full_name, validate_role};
 

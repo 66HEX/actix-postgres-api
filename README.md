@@ -14,12 +14,17 @@ The API supports standard CRUD (Create, Read, Update, Delete) operations on the 
 - **Create users** - `POST /api/users`
 - **Retrieve list of users** - `GET /api/users`
 - **Retrieve users by role** - `GET /api/users/role/{role}`
+- **Retrieve user statistics** - `GET /api/users/statistics`
 - **Retrieve a single user** - `GET /api/users/{id}`
 - **Update a user** - `PUT /api/users/{id}`
 - **Delete a user** - `DELETE /api/users/{id}`
 
 Authentication endpoints:
 - **Login** - `POST /api/auth/login`
+
+Monitoring endpoints:
+- **Health check** - `GET /health` - provides basic information about the application status
+- **Metrics** - `GET /metrics` - exposes Prometheus metrics for monitoring application performance
 
 ## Project Structure
 
@@ -30,21 +35,49 @@ Authentication endpoints:
 ├── Cargo.lock                             # Locked dependency versions
 ├── migrations/                            # Database migrations
 │   ├── 20250306220539_create_users_table.sql
-│   └── 20250307212522_add_phone_number_and_required_full_name.sql
-│   └── 20250307215355_add_password_support.sql
+│   ├── 20250307212522_add_phone_number_and_required_full_name.sql
+│   ├── 20250307215355_add_password_support.sql
 │   └── 20250308143333_add_user_role.sql.sql
 ├── src/
+│   ├── main.rs                            # Application entry point
+│   ├── lib.rs                             # Module exports for tests
 │   ├── config.rs                          # Application configuration
 │   ├── error.rs                           # Error handling
-│   ├── handlers.rs                        # HTTP endpoint handlers
-│   ├── lib.rs                             # Module exports for tests
-│   ├── main.rs                            # Application entry point
-│   ├── models.rs                          # Data models
-│   ├── repository.rs                      # Data access layer
-│   ├── auth_utils.rs                      # Authentication utilities
-│   ├── monitoring.rs                      # Performance monitoring tools
-│   ├── logging.rs                         # Enhanced logging system
-│   └── middleware.rs                      # Custom middleware components
+│   ├── handlers/                          # HTTP endpoint handlers
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── user.rs                        # User handlers
+│   │   ├── auth.rs                        # Authentication handlers
+│   │   └── statistics.rs                  # Statistics handlers
+│   ├── models/                            # Data models
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── user.rs                        # User model
+│   │   ├── auth.rs                        # Authentication models
+│   │   ├── role.rs                        # Role models
+│   │   └── statistics.rs                  # Statistics models
+│   ├── database/                          # Database access layer
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── user.rs                        # User repository
+│   │   └── connection.rs                  # Database connection pool
+│   ├── auth_utils/                        # Authentication utilities
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── password.rs                    # Password hashing and verification
+│   │   ├── validation.rs                  # Input validation
+│   │   └── roles.rs                       # Role management
+│   ├── monitoring/                        # Performance monitoring tools
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── metrics.rs                     # Prometheus metrics
+│   │   └── memory.rs                      # Memory usage monitoring
+│   ├── logging/                           # Enhanced logging system
+│   │   ├── mod.rs                         # Module exports
+│   │   └── tracing.rs                     # Tracing configuration
+│   ├── middleware/                        # Custom middleware components
+│   │   ├── mod.rs                         # Module exports
+│   │   ├── performance_metrics.rs         # Performance metrics middleware
+│   │   └── tracing.rs                     # Tracing middleware
+│   └── services/                          # Business logic layer
+│       ├── mod.rs                         # Module exports
+│       ├── user.rs                        # User service
+│       └── auth.rs                        # Authentication service
 └── tests/
     └── api_tests.rs                       # API integration tests
 ```
@@ -65,20 +98,10 @@ psql -U postgres -c "CREATE DATABASE actix_postgres_api"
 # Create the pgcrypto extension (needed for gen_random_uuid())
 psql -U postgres -d actix_postgres_api -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
-# Create the users table
-psql -U postgres -d actix_postgres_api -c "CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL DEFAULT '$2a$12$k8Y6Nt5zfQXmGO9VvQH2CehxfMY0lPuqJxzAkrxoHSJRZz8obzg4W',
-    full_name VARCHAR(100) NOT NULL,
-    phone_number VARCHAR(20),
-    role VARCHAR(20) NOT NULL DEFAULT 'client',
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_valid_role CHECK (role IN ('client', 'trainer'))
-);"
+# Run migrations
+# You can use sqlx-cli to run migrations:
+# cargo install sqlx-cli
+# sqlx migrate run
 ```
 
 ### 2. Environment Configuration
@@ -86,7 +109,7 @@ psql -U postgres -d actix_postgres_api -c "CREATE TABLE users (
 Create a `.env` file in the project root directory:
 
 ```
-DATABASE_URL=postgres://postgres:password@localhost/user_crud?sslmode=prefer
+DATABASE_URL=postgres://postgres:password@localhost/actix_postgres_api?sslmode=prefer
 HOST=127.0.0.1
 PORT=8080
 DB_MAX_CONNECTIONS=5
@@ -112,20 +135,7 @@ psql -U postgres -c "CREATE DATABASE actix_postgres_api_test"
 # Create the pgcrypto extension
 psql -U postgres -d actix_postgres_api_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
-# Create the table in the test database
-psql -U postgres -d actix_postgres_api_test -c "CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL DEFAULT '$2a$12$k8Y6Nt5zfQXmGO9VvQH2CehxfMY0lPuqJxzAkrxoHSJRZz8obzg4W',
-    full_name VARCHAR(100) NOT NULL,
-    phone_number VARCHAR(20),
-    role VARCHAR(20) NOT NULL DEFAULT 'client',
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_valid_role CHECK (role IN ('client', 'trainer'))
-);"
+# Run migrations
 
 # Run tests
 cargo test
@@ -153,6 +163,18 @@ curl -X POST http://localhost:8080/api/users \
 
 ```bash
 curl http://localhost:8080/api/users
+```
+
+### Retrieving Users by Role
+
+```bash
+curl http://localhost:8080/api/users/role/trainer
+```
+
+### Retrieving User Statistics
+
+```bash
+curl http://localhost:8080/api/users/statistics
 ```
 
 ### Retrieving a User by ID
@@ -222,6 +244,13 @@ The API supports two user roles:
 
 When creating or updating a user, the role can be specified. If not provided during user creation, the default role is "client".
 
+## Statistics
+
+The API provides statistics about users through the `/api/users/statistics` endpoint, which returns:
+
+- Count of users by role
+- Count of inactive users
+
 ## Password Requirements
 
 Passwords must meet the following security requirements:
@@ -257,25 +286,8 @@ The application includes advanced performance monitoring and extended logging ca
 - Error context enrichment
 - Configurable log levels via environment variables
 
-### Configuration:
-Log levels can be set via environment variables:
-```
-RUST_LOG=actix_postgres_api=debug,actix_web=info,sqlx=warn
-```
-
-### Available Metrics:
-- `api_http_requests_total` - Count of HTTP requests by method, path, and status
-- `api_http_request_duration_seconds` - HTTP request duration histograms
-- `api_db_queries_total` - Count of database operations by type and table
-- `api_db_query_duration_seconds` - Database operation duration histograms
-- `api_active_connections` - Current number of active HTTP connections
-- `api_memory_usage_bytes` - Current memory usage of the application
-
 ### Health Check:
 A health check endpoint is available at `/health`, providing basic information about the application status.
-
-### Testing:
-The monitoring and logging features are covered by integration tests in `api_tests.rs`, which verify the correctness of metrics collection and health endpoint functionality.
 
 ## Performance and Scalability
 
@@ -284,6 +296,17 @@ The monitoring and logging features are covered by integration tests in `api_tes
 - Secure password storage using bcrypt with cost factor
 - Designed with performance and scalability in mind
 
+## Architecture
+
+The application follows a layered architecture:
+
+1. **Handlers Layer** - HTTP request handling and response formatting
+2. **Services Layer** - Business logic and validation
+3. **Repository Layer** - Data access and persistence
+4. **Models Layer** - Data structures and serialization/deserialization
+
+This separation of concerns makes the codebase more maintainable and testable.
+
 ## Future Development
 
 - ✅ Authentication (implemented)
@@ -291,6 +314,7 @@ The monitoring and logging features are covered by integration tests in `api_tes
 - ✅ Enhanced input validation (implemented)
 - ✅ Performance monitoring (implemented)
 - ✅ Extended logging (implemented)
+- ✅ User statistics (implemented)
 - Authorization with role-based access control
 - Data pagination
 - API documentation integration (e.g., Swagger)

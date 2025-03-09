@@ -1,7 +1,7 @@
 use sqlx::postgres::PgPool;
 
 use crate::error::AppError;
-use crate::models::{LoginRequest, LoginResponse, UserResponse};
+use crate::models::{LoginRequest, UserResponse};
 use crate::database::user::UserRepository;
 use crate::auth_utils::validate_email;
 
