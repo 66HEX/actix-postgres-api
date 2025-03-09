@@ -269,7 +269,6 @@ curl -L http://localhost:8080/api/auth/oauth/{provider}
 ```
 
 This will redirect the user to the provider's authentication page. After successful authentication, the provider will redirect back to the callback URL with an authorization code.
-```
 
 ## Data Model
 
