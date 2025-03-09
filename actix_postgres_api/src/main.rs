@@ -2,11 +2,12 @@ mod config;
 mod error;
 mod handlers;
 mod models;
-mod repository;
+mod database;  // New database module
 mod auth_utils;
 mod monitoring;  // New monitoring module
 mod logging;     // New logging module
 mod middleware;  // New middleware module
+mod services;    // New services module
 
 use actix_web::{middleware::Logger, web, App, HttpServer, HttpResponse};
 use actix_web_prom::{PrometheusMetricsBuilder, PrometheusMetrics};
@@ -19,7 +20,7 @@ use tracing_actix_web::TracingLogger;
 
 use crate::config::Config;
 use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role};
-use crate::repository::UserRepository;
+use crate::database::user::UserRepository;
 use crate::error::AppError;
 use crate::logging::init_logging;
 use crate::middleware::{CustomRootSpanBuilder, PerformanceMetrics};
@@ -51,14 +52,12 @@ async fn main() -> std::io::Result<()> {
     let config = Config::from_env().expect("Failed to load configuration");
     tracing::info!("Configuration loaded: {:?}", config);
     
-    // Create database connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(config.db_max_connections)
-        .connect(&config.database_url)
+    // Create database connection pool using our new database module
+    let db_pool = database::connection::DatabasePool::new(&config)
         .await
         .expect("Failed to create database connection pool");
     
-    tracing::info!("Database connection pool created successfully");
+    let pool = db_pool.get_pool();
     
     // Setup Prometheus metrics
     let prometheus = PrometheusMetricsBuilder::new("api")
