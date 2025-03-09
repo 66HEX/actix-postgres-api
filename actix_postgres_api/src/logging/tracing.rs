@@ -55,7 +55,7 @@ pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
 
 /// Initialize structured logging with log level from environment or default to specified level
 pub fn init_logging(app_name: &str, default_level: &str) {
-    let env_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| format!("{}={},actix_web=info,sqlx=warn", app_name, default_level));
+    let env_filter = std::env::var("RUST_LOG").unwrap_or_else(|_| format!("{app_name}={default_level},actix_web=info,sqlx=warn"));
     
     let subscriber = get_subscriber(app_name.into(), env_filter, io::stdout);
     init_subscriber(subscriber);
