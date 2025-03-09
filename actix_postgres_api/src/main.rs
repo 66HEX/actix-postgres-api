@@ -18,7 +18,7 @@ use tokio::time;
 use tracing_actix_web::TracingLogger;
 
 use crate::config::Config;
-use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role, get_user_statistics};
+use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role, get_user_statistics, oauth_login, oauth_callback};
 // These imports are kept for potential future use
 #[allow(unused_imports)]
 use crate::database::user::UserRepository;
@@ -110,6 +110,8 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/auth")
                             .route("/login", web::post().to(login))
+                            .route("/oauth/{provider}", web::get().to(oauth_login))
+                            .route("/oauth/callback", web::get().to(oauth_callback))
                     )
             )
     })

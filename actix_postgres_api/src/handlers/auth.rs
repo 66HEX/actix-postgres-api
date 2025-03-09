@@ -12,11 +12,12 @@ pub async fn login(
     let service = AuthService::new(db_pool.get_ref().clone());
     
     // Authenticate user
-    let user = service.login(login.into_inner()).await?;
+    let (user, token) = service.login(login.into_inner()).await?;
     
     // Create success response
     let response = LoginResponse {
         user: user,
+        token: token,
         message: "Login successful".to_string(),
     };
     

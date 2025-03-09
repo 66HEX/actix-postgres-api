@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.9"
-actix-http = "3.0" 
+actix-http = "3.0"
+actix-web-httpauth = "0.8.0" 
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -34,3 +35,9 @@ lazy_static = "1.4"
 sysinfo = "0.30"
 time = "0.3"
 futures = "0.3"
+
+# Added dependencies for Authorization
+jsonwebtoken = "9.3.1"
+oauth2 = { version = "5.0.0", features = ["rustls-tls"] }
+reqwest = { version = "0.11", features = ["json"] }
+url = "2.5.0"

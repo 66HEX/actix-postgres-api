@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum UserRole {
     Client,
     Trainer,
+    Admin,
 }
 
 impl Default for UserRole {
@@ -20,6 +21,7 @@ impl ToString for UserRole {
         match self {
             UserRole::Client => "client".to_string(),
             UserRole::Trainer => "trainer".to_string(),
+            UserRole::Admin => "admin".to_string(),
         }
     }
 }
@@ -28,6 +30,7 @@ impl From<&str> for UserRole {
     fn from(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "trainer" => UserRole::Trainer,
+            "admin" => UserRole::Admin,
             _ => UserRole::Client, // domyślnie ustawiamy Client
         }
     }
