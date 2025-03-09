@@ -3,12 +3,9 @@ use sqlx::{postgres::PgPool, types::Uuid};
 use uuid::Uuid as UuidTrait;
 
 use crate::error::AppError;
-use crate::models::{CreateUserRequest, UpdateUserRequest, UserResponse, LoginRequest, LoginResponse, UserRole};
+use crate::models::{CreateUserRequest, UpdateUserRequest, UserResponse};
 use crate::repository::UserRepository;
-use crate::auth_utils::{
-    validate_password, validate_email, validate_phone_number, 
-    validate_username, validate_full_name, validate_role
-};
+use crate::auth_utils::{validate_password, validate_email, validate_phone_number, validate_username, validate_full_name, validate_role};
 
 pub async fn get_all_users(db_pool: web::Data<PgPool>) -> Result<HttpResponse, AppError> {
     let repo = UserRepository::new(db_pool.get_ref().clone());
@@ -159,7 +156,7 @@ pub async fn update_user(
     // Walidacja roli, jeśli jest aktualizowana
     let mut user_data = user.into_inner();
     if let Some(ref role) = user_data.role {
-        user_data.role = Some(validate_role(role)?);
+        user_data.role = Some(validate_role(role)?); 
     }
     
     let repo = UserRepository::new(db_pool.get_ref().clone());
@@ -181,27 +178,16 @@ pub async fn delete_user(
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub async fn login(
-    login: web::Json<LoginRequest>,
+// Handler do filtrowania użytkowników wg roli
+pub async fn get_users_by_role(
+    role: web::Path<String>,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, AppError> {
-    // Walidacja danych logowania
-    validate_email(&login.email)?;
-    
-    if login.password.is_empty() {
-        return Err(AppError::ValidationError("Password cannot be empty".to_string()));
-    }
-    
     let repo = UserRepository::new(db_pool.get_ref().clone());
+    let users = repo.find_by_role(&role).await?;
     
-    // Authenticate user
-    let user = repo.authenticate(login.into_inner()).await?;
-    
-    // Create success response
-    let response = LoginResponse {
-        user: UserResponse::from(user),
-        message: "Login successful".to_string(),
-    };
+    let response: Vec<UserResponse> = 
+        users.into_iter().map(UserResponse::from).collect();
     
     Ok(HttpResponse::Ok().json(response))
 }

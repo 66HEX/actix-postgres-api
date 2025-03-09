@@ -2,39 +2,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
-// Enum reprezentujący role użytkowników
-#[derive(Debug, Serialize, Deserialize, sqlx::Type, PartialEq)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
-pub enum UserRole {
-    Client,
-    Trainer,
-}
-
-impl Default for UserRole {
-    fn default() -> Self {
-        UserRole::Client
-    }
-}
-
-// Implementacja konwersji z i do stringa dla UserRole
-impl ToString for UserRole {
-    fn to_string(&self) -> String {
-        match self {
-            UserRole::Client => "client".to_string(),
-            UserRole::Trainer => "trainer".to_string(),
-        }
-    }
-}
-
-impl From<&str> for UserRole {
-    fn from(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "trainer" => UserRole::Trainer,
-            _ => UserRole::Client, // domyślnie ustawiamy Client
-        }
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
@@ -98,17 +65,4 @@ impl From<User> for UserResponse {
             updated_at: user.updated_at,
         }
     }
-}
-
-// Model uwierzytelniania
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LoginResponse {
-    pub user: UserResponse,
-    pub message: String,
 }

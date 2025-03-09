@@ -18,26 +18,14 @@ use tokio::time;
 use tracing_actix_web::TracingLogger;
 
 use crate::config::Config;
-use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login};
+use crate::handlers::{create_user, delete_user, get_all_users, get_user_by_id, update_user, login, get_users_by_role};
 use crate::repository::UserRepository;
 use crate::error::AppError;
 use crate::logging::init_logging;
 use crate::middleware::{CustomRootSpanBuilder, PerformanceMetrics};
 use crate::monitoring::update_memory_usage;
 
-// Handler do filtrowania użytkowników wg roli
-async fn get_users_by_role(
-    role: web::Path<String>,
-    db_pool: web::Data<sqlx::PgPool>,
-) -> Result<HttpResponse, AppError> {
-    let repo = UserRepository::new(db_pool.get_ref().clone());
-    let users = repo.find_by_role(&role).await?;
-    
-    let response: Vec<crate::models::UserResponse> = 
-        users.into_iter().map(crate::models::UserResponse::from).collect();
-    
-    Ok(HttpResponse::Ok().json(response))
-}
+
 
 // Endpoint to expose application health status
 async fn health_check() -> HttpResponse {
