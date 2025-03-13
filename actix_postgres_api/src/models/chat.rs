@@ -39,6 +39,8 @@ pub struct ChatRoom {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum WsMessage {
+    #[serde(rename = "authorization")]
+    Authorization { token: String },
     #[serde(rename = "connect")]
     Connect { user_id: Uuid, room_id: String },
     #[serde(rename = "message")]

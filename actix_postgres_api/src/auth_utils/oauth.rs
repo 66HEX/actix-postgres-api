@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use reqwest::Client;
 use crate::error::AppError;
-use crate::models::role::UserRole;
 use crate::models::User;
 use crate::auth_utils::jwt::generate_token;
 use sqlx::postgres::PgPool;

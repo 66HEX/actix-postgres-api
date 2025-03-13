@@ -136,7 +136,52 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatWebSocket {
                 // Parse the incoming message
                 match serde_json::from_str::<WsMessage>(&text) {
                     Ok(ws_message) => match ws_message {
+                        WsMessage::Authorization { token } => {
+                            // Verify the token
+                            match verify_token(&token) {
+                                Ok(claims) => {
+                                    // Extract user information from claims
+                                    match Uuid::parse_str(&claims.sub) {
+                                        Ok(user_id) => {
+                                            // Set the authenticated user information
+                                            self.user_id = user_id;
+                                            self.user_name = claims.name;
+                                            
+                                            // Send confirmation to the client
+                                            ctx.text(json!({
+                                                "type": "authenticated",
+                                                "user_id": user_id
+                                            }).to_string());
+                                            
+                                            tracing::info!("WebSocket authenticated for user: {}", user_id);
+                                        },
+                                        Err(_) => {
+                                            ctx.text(json!({
+                                                "error": "Invalid user ID in token"
+                                            }).to_string());
+                                            ctx.stop();
+                                        }
+                                    }
+                                },
+                                Err(e) => {
+                                    tracing::error!("Invalid token in WebSocket connection: {}", e);
+                                    ctx.text(json!({
+                                        "error": "Invalid authentication token"
+                                    }).to_string());
+                                    ctx.stop();
+                                }
+                            }
+                        },
                         WsMessage::Connect { user_id, room_id } => {
+                            // Check if user is authenticated
+                            if self.user_id == Uuid::nil() {
+                                ctx.text(json!({
+                                    "error": "Not authenticated"
+                                }).to_string());
+                                ctx.stop();
+                                return;
+                            }
+                            
                             // Validate that the user_id matches the authenticated user
                             if user_id != self.user_id {
                                 ctx.text(json!({
@@ -305,36 +350,11 @@ lazy_static::lazy_static! {
 
 // WebSocket connection handler
 pub async fn ws_connect(req: HttpRequest, stream: web::Payload, db_pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
-    // Extract and validate JWT token from query parameters
-    let query = req.query_string();
-    let token = query.split('&')
-        .find(|s| s.starts_with("token="))
-        .map(|s| s.trim_start_matches("token="))
-        .ok_or_else(|| {
-            tracing::error!("Missing token in WebSocket connection");
-            actix_web::error::ErrorUnauthorized("Missing authentication token")
-        })?;
-    
-    // Verify the token
-    let claims = match verify_token(token) {
-        Ok(claims) => claims,
-        Err(e) => {
-            tracing::error!("Invalid token in WebSocket connection: {}", e);
-            return Err(actix_web::error::ErrorUnauthorized("Invalid authentication token").into());
-        }
-    };
-    
-    // Extract user information from claims
-    let user_id = Uuid::parse_str(&claims.sub).map_err(|_| {
-        actix_web::error::ErrorInternalServerError("Invalid user ID in token")
-    })?;
-    
-    let user_name = claims.name;
-    
-    // Create the WebSocket actor
+    // Create the WebSocket actor with unauthenticated state
+    // Authentication will happen via the first message sent by the client with JSON format
     let ws = ChatWebSocket {
-        user_id,
-        user_name,
+        user_id: Uuid::nil(), // Will be set after authentication
+        user_name: String::new(), // Will be set after authentication
         room_id: None,
         db_pool,
         server: CHAT_SERVER.clone(),

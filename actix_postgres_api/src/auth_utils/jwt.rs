@@ -1,4 +1,4 @@
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, errors::Error as JwtError};
+use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
 use serde::{Deserialize, Serialize};
 use chrono::{Utc, Duration};
 use sqlx::types::Uuid;
