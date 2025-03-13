@@ -8,6 +8,8 @@ A complete RESTful API backend for user management and authentication, built wit
 - **regex** for enhanced input validation
 - **JWT** for secure token-based authentication
 - **OAuth 2.0** for third-party authentication (Google, Facebook, GitHub)
+- **WebSockets** for real-time chat functionality
+- **WSS Protocol** for secure WebSocket connections
 
 ## Functionality
 
@@ -26,6 +28,11 @@ Authentication endpoints:
 - **OAuth Login** - `GET /api/auth/oauth/{provider}` - initiates OAuth flow with specified provider
 - **OAuth Callback** - `GET /api/auth/oauth/callback` - handles OAuth provider callback
 
+Chat endpoints:
+- **WebSocket Chat** - `GET /api/ws/chat` - WebSocket endpoint for real-time chat
+- **Get Chat Rooms** - `GET /api/chat/rooms` - retrieves available chat rooms
+- **Get Room Messages** - `GET /api/chat/rooms/{room_id}/messages` - retrieves messages for a specific room
+
 Monitoring endpoints:
 - **Health check** - `GET /health` - provides basic information about the application status
 - **Metrics** - `GET /metrics` - exposes Prometheus metrics for monitoring application performance
@@ -37,12 +44,16 @@ Monitoring endpoints:
 ├── .env                                   # Environment variables
 ├── Cargo.toml                             # Project configuration and dependencies
 ├── Cargo.lock                             # Locked dependency versions
+├── certs/                                 # SSL/TLS certificates for HTTPS and WSS
+│   ├── cert.pem                           # SSL certificate
+│   └── key.pem                            # SSL private key
 ├── migrations/                            # Database migrations
 │   ├── 20250306220539_create_users_table.sql
 │   ├── 20250307212522_add_phone_number_and_required_full_name.sql
 │   ├── 20250307215355_add_password_support.sql
-│   └── 20250308143333_add_user_role.sql
-│   └── 20250309000000_add_admin_role.sql
+│   ├── 20250308143333_add_user_role.sql
+│   ├── 20250309000000_add_admin_role.sql
+│   └── 20250310000000_create_chat_tables.sql
 ├── src/
 │   ├── main.rs                            # Application entry point
 │   ├── lib.rs                             # Module exports for tests
@@ -52,13 +63,15 @@ Monitoring endpoints:
 │   │   ├── mod.rs                         # Module exports
 │   │   ├── user.rs                        # User handlers
 │   │   ├── auth.rs                        # Authentication handlers
-│   │   └── statistics.rs                  # Statistics handlers
+│   │   ├── statistics.rs                  # Statistics handlers
+│   │   └── chat.rs                        # WebSocket chat handlers
 │   ├── models/                            # Data models
 │   │   ├── mod.rs                         # Module exports
 │   │   ├── user.rs                        # User model
 │   │   ├── auth.rs                        # Authentication models
 │   │   ├── role.rs                        # Role models
-│   │   └── statistics.rs                  # Statistics models
+│   │   ├── statistics.rs                  # Statistics models
+│   │   └── chat.rs                        # Chat models
 │   ├── database/                          # Database access layer
 │   │   ├── mod.rs                         # Module exports
 │   │   ├── user.rs                        # User repository
@@ -132,6 +145,11 @@ FACEBOOK_CLIENT_SECRET=your_facebook_client_secret
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 OAUTH_REDIRECT_URL=http://localhost:8080/api/auth/oauth/callback
+
+# SSL/TLS Configuration for HTTPS and WSS
+SSL_CERT_PATH=./certs/cert.pem
+SSL_KEY_PATH=./certs/key.pem
+ENABLE_HTTPS=true
 ```
 
 Adjust the connection parameters to match your PostgreSQL configuration.
@@ -142,7 +160,10 @@ Adjust the connection parameters to match your PostgreSQL configuration.
 cargo run
 ```
 
-The application will be available at `http://127.0.0.1:8080/api/users`.
+The application will be available at:
+- HTTP: `http://127.0.0.1:8080/api/users`
+- HTTPS: `https://127.0.0.1:8080/api/users` (when ENABLE_HTTPS=true)
+- WSS: `wss://127.0.0.1:8080/api/ws/chat` (for WebSocket chat)
 
 ### 4. Running Tests
 
@@ -269,7 +290,6 @@ curl -L http://localhost:8080/api/auth/oauth/{provider}
 ```
 
 This will redirect the user to the provider's authentication page. After successful authentication, the provider will redirect back to the callback URL with an authorization code.
-```
 
 ## Data Model
 
@@ -421,5 +441,80 @@ The OAuth flow works as follows:
 - ✅ User statistics (implemented)
 - ✅ OAuth 2.0 authentication (implemented)
 - ✅ JWT token-based authorization (implemented)
+- ✅ WebSocket chat functionality (implemented)
+- ✅ WSS protocol support (implemented)
+- Data pagination
+- API documentation integration (e.g., Swagger)
+
+## WebSocket Chat API
+
+The application includes a real-time chat system using WebSockets with secure WSS protocol support:
+
+### Chat Data Model
+
+- **Chat Rooms** - Predefined chat rooms where users can join and exchange messages
+- **Chat Messages** - Messages sent by users in specific chat rooms
+
+### WebSocket Connection
+
+To connect to the WebSocket chat:
+
+```javascript
+// Connect to secure WebSocket (WSS)
+const token = "your_jwt_token"; // JWT token from login
+const ws = new WebSocket("wss://localhost:8080/api/ws/chat?token=" + token);
+
+// Handle connection open
+ws.onopen = () => {
+  console.log("Connected to chat");
+  
+  // Join a chat room
+  ws.send(JSON.stringify({
+    type: "connect",
+    user_id: "your_user_id",
+    room_id: "general"
+  }));
+};
+
+// Handle incoming messages
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log("Received message:", message);
+};
+
+// Send a message
+function sendMessage(content) {
+  ws.send(JSON.stringify({
+    type: "message",
+    content: content,
+    room_id: "general"
+  }));
+}
+```
+
+### REST API for Chat History
+
+```bash
+# Get all available chat rooms
+curl https://localhost:8080/api/chat/rooms \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+# Get messages from a specific room
+curl https://localhost:8080/api/chat/rooms/general/messages \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Future Development
+
+- ✅ Authentication (implemented)
+- ✅ User roles (implemented)
+- ✅ Enhanced input validation (implemented)
+- ✅ Performance monitoring (implemented)
+- ✅ Extended logging (implemented)
+- ✅ User statistics (implemented)
+- ✅ OAuth 2.0 authentication (implemented)
+- ✅ JWT token-based authorization (implemented)
+- ✅ WebSocket chat functionality (implemented)
+- ✅ WSS protocol support (implemented)
 - Data pagination
 - API documentation integration (e.g., Swagger)

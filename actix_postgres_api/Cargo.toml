@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4.9"
+# Specify rustls version 0.20.8 to match what actix-web expects
+rustls = { version = "0.20.8", features = ["dangerous_configuration"] }
+actix-web = { version = "4.9", features = ["rustls"] }
 actix-http = "3.0"
 actix-web-httpauth = "0.8.0" 
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
@@ -41,3 +43,8 @@ jsonwebtoken = "9.3.1"
 oauth2 = { version = "5.0.0", features = ["rustls-tls"] }
 reqwest = { version = "0.11", features = ["json"] }
 url = "2.5.0"
+actix-web-actors = "4.3.1"
+actix = "0.13.5"
+
+# Added dependencies for SSL/TLS support
+rustls-pemfile = "1.0.0"
