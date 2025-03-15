@@ -10,3 +10,7 @@ pub mod auth;
 pub mod role;
 pub mod chat;
 pub mod statistics;
+pub mod appointment;
+
+// Re-export models
+pub use appointment::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse, AppointmentStatus};

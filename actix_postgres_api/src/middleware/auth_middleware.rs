@@ -30,7 +30,7 @@ impl Auth {
         let user_role = UserRole::from(claims.role.as_str());
         
         if user_role != required_role {
-            return Err(AppError::ValidationError("Insufficient permissions".to_string()));
+            return Err(AppError::Forbidden("Insufficient permissions".to_string()));
         }
         
         // Return user ID if validation successful
@@ -55,5 +55,25 @@ impl Auth {
         
         // Return user ID
         Ok(claims.sub)
+    }
+    
+    // Helper method to extract user role from token
+    pub fn extract_role(req: &HttpRequest) -> Result<UserRole, AppError> {
+        // Extract the Authorization header
+        let auth_header = req.headers().get("Authorization")
+            .ok_or_else(|| AppError::ValidationError("Missing authorization header".to_string()))?;
+        
+        // Convert header to string
+        let auth_str = auth_header.to_str()
+            .map_err(|_| AppError::ValidationError("Invalid authorization header format".to_string()))?;
+        
+        // Extract token from header
+        let token = extract_token_from_header(auth_str)?;
+        
+        // Verify token
+        let claims = verify_token(token)?;
+        
+        // Convert role string to UserRole enum and return
+        Ok(UserRole::from(claims.role.as_str()))
     }
 }

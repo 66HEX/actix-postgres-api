@@ -22,10 +22,12 @@ A complete RESTful API backend for user management and authentication, built wit
   - [User Management](#user-management)
   - [Authentication](#authentication)
   - [Chat API](#chat-api)
+  - [Appointment Scheduling](#appointment-scheduling)
 - [Data Models](#data-models)
   - [User Entity](#user-entity)
   - [User Roles](#user-roles)
   - [Statistics](#statistics)
+  - [Appointment Entity](#appointment-entity)
 - [Security](#security)
   - [Password Requirements](#password-requirements)
   - [JWT Authentication](#jwt-authentication)
@@ -39,6 +41,7 @@ A complete RESTful API backend for user management and authentication, built wit
 ## Features
 
 - Complete user management system with CRUD operations
+- Appointment scheduling system
 - Role-based access control (client, trainer, admin)
 - Secure authentication with JWT and OAuth 2.0
 - Real-time chat functionality using WebSockets
@@ -75,6 +78,18 @@ A complete RESTful API backend for user management and authentication, built wit
 </details>
 
 <details>
+<summary><strong>Appointment Endpoints</strong></summary>
+
+- **Get All Appointments** - `GET /api/appointments` - retrieves all appointments (admin only)
+- **Get Appointment by ID** - `GET /api/appointments/{id}` - retrieves a specific appointment
+- **Get Client Appointments** - `GET /api/users/{id}/client-appointments` - retrieves appointments for a specific client
+- **Get Trainer Appointments** - `GET /api/users/{id}/trainer-appointments` - retrieves appointments for a specific trainer
+- **Create Appointment** - `POST /api/appointments` - creates a new appointment
+- **Update Appointment** - `PUT /api/appointments/{id}` - updates an existing appointment
+- **Delete Appointment** - `DELETE /api/appointments/{id}` - deletes an appointment
+</details>
+
+<details>
 <summary><strong>Authentication Endpoints</strong></summary>
 
 - **Login** - `POST /api/auth/login`
@@ -89,7 +104,6 @@ A complete RESTful API backend for user management and authentication, built wit
 - **Get Chat Rooms** - `GET /api/chat/rooms` - retrieves available chat rooms
 - **Get Room Messages** - `GET /api/chat/rooms/{room_id}/messages` - retrieves messages for a specific room
 </details>
-
 <details>
 <summary><strong>Monitoring Endpoints</strong></summary>
 
@@ -115,8 +129,9 @@ A complete RESTful API backend for user management and authentication, built wit
 │   ├── 20250307212522_add_phone_number_and_required_full_name.sql
 │   ├── 20250307215355_add_password_support.sql
 │   ├── 20250308143333_add_user_role.sql
-│   ├── 20250309000000_add_admin_role.sql
-│   └── 20250310000000_create_chat_tables.sql
+│   ├── 20250315121806_add_admin_role.sql
+│   ├── 20250315121828_create_chat_tables.sql
+│   └── 20250315121847_create_appointments_table.sql
 ├── src/
 │   ├── main.rs                            # Application entry point
 │   ├── lib.rs                             # Module exports for tests
@@ -127,17 +142,20 @@ A complete RESTful API backend for user management and authentication, built wit
 │   │   ├── user.rs                        # User handlers
 │   │   ├── auth.rs                        # Authentication handlers
 │   │   ├── statistics.rs                  # Statistics handlers
-│   │   └── chat.rs                        # WebSocket chat handlers
+│   │   ├── chat.rs                        # WebSocket chat handlers
+│   │   └── appointment.rs                 # Appointment handlers
 │   ├── models/                            # Data models
 │   │   ├── mod.rs                         # Module exports
 │   │   ├── user.rs                        # User model
 │   │   ├── auth.rs                        # Authentication models
 │   │   ├── role.rs                        # Role models
 │   │   ├── statistics.rs                  # Statistics models
-│   │   └── chat.rs                        # Chat models
+│   │   ├── chat.rs                        # Chat models
+│   │   └── appointment.rs                 # Appointment model
 │   ├── database/                          # Database access layer
 │   │   ├── mod.rs                         # Module exports
 │   │   ├── user.rs                        # User repository
+│   │   ├── appointment.rs                 # Appointment repository
 │   │   └── connection.rs                  # Database connection pool
 │   ├── auth_utils/                        # Authentication utilities
 │   │   ├── mod.rs                         # Module exports
@@ -158,6 +176,7 @@ A complete RESTful API backend for user management and authentication, built wit
 │   └── services/                          # Business logic layer
 │       ├── mod.rs                         # Module exports
 │       ├── user.rs                        # User service
+│       ├── appointment.rs                 # Appointment service
 │       └── auth.rs                        # Authentication service
 └── tests/
     └── api_tests.rs                       # API integration tests
@@ -350,6 +369,154 @@ curl -X DELETE http://localhost:8080/api/users/{id}
 ```
 </details>
 
+### Appointment Scheduling
+
+<details>
+<summary><strong>Creating an Appointment</strong></summary>
+
+```bash
+curl -X POST http://localhost:8080/api/appointments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+    "title": "Personal Training Session",
+    "appointment_date": "2025-04-15",
+    "start_time": "14:30:00",
+    "duration_minutes": 60,
+    "notes": "Focus on strength training"
+  }'
+```
+
+Response:
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+  "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+  "title": "Personal Training Session",
+  "appointment_date": "2025-04-15",
+  "start_time": "14:30:00",
+  "duration_minutes": 60,
+  "status": "scheduled",
+  "notes": "Focus on strength training",
+  "created_at": "2025-04-01T10:00:00Z",
+  "updated_at": "2025-04-01T10:00:00Z"
+}
+```
+</details>
+
+<details>
+<summary><strong>Retrieving Client Appointments</strong></summary>
+
+```bash
+curl http://localhost:8080/api/users/{client_id}/client-appointments \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+Response:
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+    "title": "Personal Training Session",
+    "appointment_date": "2025-04-15",
+    "start_time": "14:30:00",
+    "duration_minutes": 60,
+    "status": "scheduled",
+    "notes": "Focus on strength training",
+    "created_at": "2025-04-01T10:00:00Z",
+    "updated_at": "2025-04-01T10:00:00Z"
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f1234567890a",
+    "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+    "title": "Cardio Session",
+    "appointment_date": "2025-04-20",
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "status": "scheduled",
+    "notes": "Endurance training",
+    "created_at": "2025-04-02T09:30:00Z",
+    "updated_at": "2025-04-02T09:30:00Z"
+  }
+]
+```
+</details>
+
+<details>
+<summary><strong>Retrieving Trainer Appointments</strong></summary>
+
+```bash
+curl http://localhost:8080/api/users/{trainer_id}/trainer-appointments \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+Response is similar to client appointments, showing all appointments for the specified trainer.
+</details>
+
+<details>
+<summary><strong>Updating an Appointment</strong></summary>
+
+```bash
+curl -X PUT http://localhost:8080/api/appointments/{id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "title": "Updated Training Session",
+    "appointment_date": "2025-04-16",
+    "start_time": "15:00:00",
+    "notes": "Focus on core strength"
+  }'
+```
+
+Response will be the updated appointment object.
+</details>
+
+<details>
+<summary><strong>Marking an Appointment as Completed</strong></summary>
+
+```bash
+curl -X PUT http://localhost:8080/api/appointments/{id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "status": "completed"
+  }'
+```
+
+Note: Only trainers or admins can mark appointments as completed.
+</details>
+
+<details>
+<summary><strong>Cancelling an Appointment</strong></summary>
+
+```bash
+curl -X PUT http://localhost:8080/api/appointments/{id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "status": "cancelled"
+  }'
+```
+</details>
+
+<details>
+<summary><strong>Deleting an Appointment</strong></summary>
+
+```bash
+curl -X DELETE http://localhost:8080/api/appointments/{id} \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+Note: Only the client who created the appointment or an admin can delete appointments.
+</details>
+
+
+
 ### Authentication
 
 <details>
@@ -421,9 +588,24 @@ ws.onmessage = (event) => {
   const message = JSON.parse(event.data);
   console.log("Received message:", message);
   
-  // Check if we're authenticated successfully
-  if (message.type === "authenticated") {
-    console.log("Authentication successful!");
+  // Handle different message types
+  if (message.type === "connected") {
+    console.log("Successfully joined room:", message.room_id);
+  } else if (message.type === "authenticated") {
+    console.log("Successfully authenticated as:", message.user_id);
+    
+    // After authentication, join a chat room
+    ws.send(JSON.stringify({
+      type: "connect",
+      user_id: message.user_id,
+      room_id: "general"
+    }));
+  } else if (message.error) {
+    console.error("Error:", message.error);
+  } else if (message.sender_name === "System") {
+    console.log("System message:", message.content);
+  } else {
+    console.log(`${message.sender_name}: ${message.content}`);
   }
 };
 ```
@@ -546,17 +728,16 @@ ws.onmessage = (event) => {
 ```javascript
 // Connect to secure WebSocket (WSS)
 const token = "your_jwt_token"; // JWT token from login
-const ws = new WebSocket("wss://localhost:8080/api/ws/chat?token=" + token);
+const ws = new WebSocket("wss://localhost:8080/api/ws/chat");
 
 // Handle connection open
 ws.onopen = () => {
   console.log("Connected to chat");
   
-  // Join a chat room
+  // Send authorization message with JWT token
   ws.send(JSON.stringify({
-    type: "connect",
-    user_id: "your_user_id",
-    room_id: "general"
+    type: "authorization",
+    token: token
   }));
 };
 
@@ -570,6 +751,13 @@ ws.onmessage = (event) => {
     console.log("Successfully joined room:", message.room_id);
   } else if (message.type === "authenticated") {
     console.log("Successfully authenticated as:", message.user_id);
+    
+    // After authentication, join a chat room
+    ws.send(JSON.stringify({
+      type: "connect",
+      user_id: message.user_id,
+      room_id: "general"
+    }));
   } else if (message.error) {
     console.error("Error:", message.error);
   } else if (message.sender_name === "System") {
@@ -646,10 +834,76 @@ When creating or updating a user, the role can be specified. If not provided dur
 
 ### Statistics
 
-The API provides statistics about users through the `/api/users/statistics` endpoint, which returns:
+The API provides statistics about users through the `/api/users/statistics` endpoint. The statistics include detailed information about user roles, inactive users, and registration trends.
 
-- Count of users by role
-- Count of inactive users
+| Field | Type | Description |
+|-------|------|-------------|
+| `roles` | Array of Objects | List of user role statistics |
+| `roles[].role` | String | User role name ("client", "trainer", "admin") |
+| `roles[].count` | Integer | Number of users with this role |
+| `inactive_count` | Integer | Total number of inactive users |
+| `registration_stats` | Object | Registration statistics over different time periods |
+| `registration_stats.last_24h` | Integer | Number of users registered in the last 24 hours |
+| `registration_stats.last_7d` | Integer | Number of users registered in the last 7 days |
+| `registration_stats.last_30d` | Integer | Number of users registered in the last 30 days |
+
+<details>
+<summary>Statistics Response Example</summary>
+
+```json
+{
+  "roles": [
+    { "role": "client", "count": 100 },
+    { "role": "trainer", "count": 45 },
+    { "role": "admin", "count": 5 }
+  ],
+  "inactive_count": 30,
+  "registration_stats": {
+    "last_24h": 5,
+    "last_7d": 25,
+    "last_30d": 45
+  }
+}
+```
+</details>
+
+### Appointment Entity
+
+The `Appointment` entity represents scheduled training sessions between clients and trainers:
+
+| Field | Type | Description |
+|--|--|--|
+| `id` | UUID | Unique identifier |
+| `client_id` | UUID | ID of the client who booked the appointment |
+| `trainer_id` | UUID | ID of the trainer conducting the session |
+| `title` | String | Title/name of the appointment |
+| `appointment_date` | Date | Date of the appointment (YYYY-MM-DD) |
+| `start_time` | Time | Start time of the appointment (HH:MM:SS) |
+| `duration_minutes` | Integer | Duration of the appointment in minutes |
+| `status` | String | Current status: "scheduled", "completed", or "cancelled" |
+| `notes` | String | Optional notes about the appointment |
+| `created_at` | DateTime | Record creation timestamp |
+| `updated_at` | DateTime | Record last update timestamp |
+
+**Appointment Status Values:**
+
+| Status | Description |
+|--|--|
+| `scheduled` | Default status for new appointments |
+| `completed` | Marked by trainer or admin when the appointment is completed |
+| `cancelled` | Marked by client, trainer, or admin when the appointment is cancelled |
+
+**Access Control:**
+- Clients can create, view, update, and cancel their own appointments
+- Trainers can view and update appointments where they are the assigned trainer
+- Only trainers and admins can mark appointments as "completed"
+- Only clients who created the appointment or admins can delete appointments
+
+Appointment statuses:
+- `scheduled` - Default status for new appointments
+- `completed` - Marked by trainer or admin when the appointment is completed
+- `cancelled` - Marked by client, trainer, or admin when the appointment is cancelled
+</details>
 
 ## Security
 
@@ -924,6 +1178,7 @@ The roadmap for future development includes:
 - ✅ JWT token-based authorization
 - ✅ WebSocket chat functionality
 - ✅ WSS protocol support
+- ✅ Appointment scheduling system
 
 🔜 Planned features:
 - 🔜 Data pagination for large result sets

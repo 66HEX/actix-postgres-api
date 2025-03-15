@@ -300,4 +300,64 @@ impl UserRepository {
             Ok(result.count.unwrap_or(0))
         }).instrument(span).await
     }
+    
+    // Metoda do liczenia rejestracji użytkowników w ostatnich 24 godzinach
+    pub async fn count_registrations_last_24h(&self) -> Result<i64, AppError> {
+        let span = create_db_span(
+            "count_registrations_last_24h",
+            "SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours'",
+            "None",
+        );
+        
+        DbMetrics::track("SELECT", "users", || async {
+            let result = sqlx::query!(
+                "SELECT COUNT(*) as count FROM users WHERE created_at > NOW() - INTERVAL '24 hours'"
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            Ok(result.count.unwrap_or(0))
+        }).instrument(span).await
+    }
+    
+    // Metoda do liczenia rejestracji użytkowników w ostatnich 7 dniach
+    pub async fn count_registrations_last_7d(&self) -> Result<i64, AppError> {
+        let span = create_db_span(
+            "count_registrations_last_7d",
+            "SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'",
+            "None",
+        );
+        
+        DbMetrics::track("SELECT", "users", || async {
+            let result = sqlx::query!(
+                "SELECT COUNT(*) as count FROM users WHERE created_at > NOW() - INTERVAL '7 days'"
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            Ok(result.count.unwrap_or(0))
+        }).instrument(span).await
+    }
+    
+    // Metoda do liczenia rejestracji użytkowników w ostatnich 30 dniach
+    pub async fn count_registrations_last_30d(&self) -> Result<i64, AppError> {
+        let span = create_db_span(
+            "count_registrations_last_30d",
+            "SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '30 days'",
+            "None",
+        );
+        
+        DbMetrics::track("SELECT", "users", || async {
+            let result = sqlx::query!(
+                "SELECT COUNT(*) as count FROM users WHERE created_at > NOW() - INTERVAL '30 days'"
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            Ok(result.count.unwrap_or(0))
+        }).instrument(span).await
+    }
 }

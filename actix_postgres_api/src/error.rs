@@ -11,6 +11,15 @@ pub enum AppError {
     #[error("Not found: {0}")]
     NotFoundError(String),
     
+    #[error("Not found: {0}")]
+    NotFound(String),
+    
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+    
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+    
     #[error("Validation error: {0}")]
     ValidationError(String),
     
@@ -29,6 +38,9 @@ impl ResponseError for AppError {
         match self {
             AppError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotFoundError(_) => StatusCode::NOT_FOUND,
+            AppError::NotFound(_) => StatusCode::NOT_FOUND,
+            AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
+            AppError::Forbidden(_) => StatusCode::FORBIDDEN,
             AppError::ValidationError(_) => StatusCode::BAD_REQUEST,
             AppError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

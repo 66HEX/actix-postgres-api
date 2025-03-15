@@ -170,4 +170,17 @@ impl UserService {
     pub async fn count_inactive_users(&self) -> Result<i64, AppError> {
         self.repo.count_inactive_users().await
     }
+    
+    // Methods for registration statistics
+    pub async fn count_registrations_last_24h(&self) -> Result<i64, AppError> {
+        self.repo.count_registrations_last_24h().await
+    }
+    
+    pub async fn count_registrations_last_7d(&self) -> Result<i64, AppError> {
+        self.repo.count_registrations_last_7d().await
+    }
+    
+    pub async fn count_registrations_last_30d(&self) -> Result<i64, AppError> {
+        self.repo.count_registrations_last_30d().await
+    }
 }

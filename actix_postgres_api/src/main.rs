@@ -190,6 +190,8 @@ async fn main() -> std::io::Result<()> {
                             .route("/rooms", web::post().to(create_chat_room))
                             .route("/rooms/{room_id}/messages", web::get().to(get_room_messages))
                     )
+                    // Configure appointment routes
+                    .configure(handlers::configure_appointment_routes)
             )
     });
     
