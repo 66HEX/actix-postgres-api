@@ -1,6 +1,7 @@
 // Export all monitoring components
 pub mod metrics;
 pub mod memory;
+pub mod system;
 
 // Re-export commonly used items
 // HTTP metrics used in middleware and handlers
@@ -13,3 +14,5 @@ pub use metrics::{Timer, DbMetrics};
 #[allow(unused_imports)]
 pub use memory::MEMORY_USAGE;
 pub use memory::update_memory_usage;
+// System information and uptime tracking
+pub use system::{get_uptime, get_start_time, get_system_info, SystemInfo};

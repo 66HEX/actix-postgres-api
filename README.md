@@ -42,7 +42,8 @@ A complete RESTful API backend for user management and authentication, built wit
 - Role-based access control (client, trainer, admin)
 - Secure authentication with JWT and OAuth 2.0
 - Real-time chat functionality using WebSockets
-- Advanced monitoring and logging capabilities
+- Structured logging with tracing
+- Health check endpoint with system information
 - Comprehensive error handling
 - Database migrations for version control
 - Secure HTTPS and WSS protocol support
@@ -758,14 +759,49 @@ RUST_LOG=actix_postgres_api=debug,actix_web=info,sqlx=warn
 <details>
 <summary><strong>Health Check</strong></summary>
 
-A health check endpoint is available at `/health`, providing basic information about the application status:
+A health check endpoint is available at `/health`, providing information about the application and system status. It's useful for monitoring and debugging purposes.
 
 ```json
 {
   "status": "up",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "uptime": 3600,
+  "start_time": 1678901234,
+  "system_info": {
+    "cpu_usage": 5.2,
+    "total_memory": 16777216000,
+    "used_memory": 8388608000,
+    "memory_usage_percent": 50.0,
+    "total_swap": 4294967296,
+    "used_swap": 1073741824,
+    "hostname": "server-name",
+    "os_name": "Windows",
+    "os_version": "10.0.19045",
+    "kernel_version": "10.0.19045.1"
+  }
 }
 ```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | Current application status ("up" when running) |
+| version | string | Application version from Cargo.toml |
+| uptime | number | Application uptime in seconds |
+| start_time | number | Unix timestamp when the application started |
+| system_info | object | Detailed system information |
+| system_info.cpu_usage | number | Current CPU usage percentage |
+| system_info.total_memory | number | Total system memory in bytes |
+| system_info.used_memory | number | Used system memory in bytes |
+| system_info.memory_usage_percent | number | Memory usage as percentage |
+| system_info.total_swap | number | Total swap space in bytes |
+| system_info.used_swap | number | Used swap space in bytes |
+| system_info.hostname | string | System hostname |
+| system_info.os_name | string | Operating system name |
+| system_info.os_version | string | Operating system version |
+| system_info.kernel_version | string | Kernel version |
+
 </details>
 
 ## Architecture

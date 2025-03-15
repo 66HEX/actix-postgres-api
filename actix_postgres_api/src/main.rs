@@ -39,9 +39,50 @@ use crate::monitoring::update_memory_usage;
 
 // Endpoint to expose application health status
 async fn health_check() -> HttpResponse {
+    // Get system information
+    let system_info = monitoring::get_system_info();
+    let uptime_seconds = monitoring::get_uptime();
+    let start_time = monitoring::get_start_time();
+    
+    // Format uptime in a human-readable format
+    let days = uptime_seconds / 86400;
+    let hours = (uptime_seconds % 86400) / 3600;
+    let minutes = (uptime_seconds % 3600) / 60;
+    let seconds = uptime_seconds % 60;
+    
+    let uptime_formatted = format!("{:02}d {:02}h {:02}m {:02}s", days, hours, minutes, seconds);
+    
+    // Get database connection status
+    // This is a placeholder - in a real implementation, you might want to check if the database is responsive
+    let db_status = "connected";
+    
     HttpResponse::Ok().json(serde_json::json!({
         "status": "up",
-        "version": env!("CARGO_PKG_VERSION")
+        "version": env!("CARGO_PKG_VERSION"),
+        "uptime": {
+            "seconds": uptime_seconds,
+            "formatted": uptime_formatted
+        },
+        "start_time": start_time,
+        "system": {
+            "hostname": system_info.hostname,
+            "os": {
+                "name": system_info.os_name,
+                "version": system_info.os_version,
+                "kernel": system_info.kernel_version
+            },
+            "cpu": {
+                "usage_percent": system_info.cpu_usage
+            },
+            "memory": {
+                "total_bytes": system_info.total_memory,
+                "used_bytes": system_info.used_memory,
+                "usage_percent": system_info.memory_usage_percent
+            }
+        },
+        "database": {
+            "status": db_status
+        }
     }))
 }
 
