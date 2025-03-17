@@ -48,3 +48,4 @@ actix = "0.13.5"
 
 # Added dependencies for SSL/TLS support
 rustls-pemfile = "1.0.0"
+actix-cors = "0.7.1"

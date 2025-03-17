@@ -10,6 +10,7 @@ mod middleware;  // New middleware module
 mod services;    // New services module
 
 use actix_web::{middleware::Logger, web, App, HttpServer, HttpResponse};
+use actix_cors::Cors;
 use actix_web_prom::PrometheusMetricsBuilder;
 use dotenv::dotenv;
 use std::time::Duration;
@@ -32,7 +33,7 @@ use crate::database::user::UserRepository;
 #[allow(unused_imports)]
 use crate::error::AppError;
 use crate::logging::init_logging;
-use crate::middleware::{CustomRootSpanBuilder, PerformanceMetrics};
+use crate::middleware::{CustomRootSpanBuilder, PerformanceMetrics, cors_middleware};
 use crate::monitoring::update_memory_usage;
 
 
@@ -156,6 +157,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             // Add Prometheus metrics
             .wrap(prometheus.clone())
+            // Add CORS middleware
+            .wrap(cors_middleware())
             // Add tracing logger instead of standard logger
             .wrap(TracingLogger::<CustomRootSpanBuilder>::new())
             // Add performance metrics middleware
