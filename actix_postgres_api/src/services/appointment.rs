@@ -83,11 +83,11 @@ impl AppointmentService {
         // Create a modified appointment with the correct trainer ID
         let modified_appointment = CreateAppointmentRequest {
             trainer_id: trainer_uuid,
-            title: appointment.title,
+            type_: appointment.type_,
             appointment_date: appointment.appointment_date,
             start_time: appointment.start_time,
             duration_minutes: appointment.duration_minutes,
-            notes: appointment.notes,
+            location: appointment.location,
         };
         
         // Create the appointment

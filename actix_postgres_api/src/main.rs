@@ -17,8 +17,6 @@ use std::time::Duration;
 use tokio::task;
 use tokio::time;
 use tracing_actix_web::TracingLogger;
-// Use the specific rustls version that actix-web expects
-// Use the specific rustls version that actix-web expects
 use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use std::fs::File;

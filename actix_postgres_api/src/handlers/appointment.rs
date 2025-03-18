@@ -48,7 +48,7 @@ pub async fn get_appointment_by_id(
     Ok(HttpResponse::Ok().json(AppointmentResponse::from(appointment)))
 }
 
-#[get("/users/{id}/client-appointments")]
+#[get("/appointments/client/{id}")]
 pub async fn get_client_appointments(
     req: HttpRequest,
     id: web::Path<String>,
@@ -70,7 +70,7 @@ pub async fn get_client_appointments(
     Ok(HttpResponse::Ok().json(response))
 }
 
-#[get("/users/{id}/trainer-appointments")]
+#[get("/appointments/trainer/{id}")]
 pub async fn get_trainer_appointments(
     req: HttpRequest,
     id: web::Path<String>,
@@ -179,13 +179,11 @@ pub async fn delete_appointment(
 
 // Function to configure and register all appointment routes
 pub fn configure_routes(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        get_all_appointments
-    )
-    .service(get_appointment_by_id)
-    .service(get_client_appointments)
-    .service(get_trainer_appointments)
-    .service(create_appointment)
-    .service(update_appointment)
-    .service(delete_appointment);
+    cfg.service(get_all_appointments)
+       .service(get_appointment_by_id)
+       .service(create_appointment)
+       .service(update_appointment)
+       .service(delete_appointment)
+       .service(get_client_appointments)
+       .service(get_trainer_appointments);
 }

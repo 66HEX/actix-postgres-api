@@ -13,4 +13,4 @@ pub mod statistics;
 pub mod appointment;
 
 // Re-export models
-pub use appointment::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse, AppointmentStatus};
+pub use appointment::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse, AppointmentStatus, AppointmentType};

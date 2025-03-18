@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentStatus};
+use crate::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentStatus, AppointmentType};
 use crate::monitoring::DbMetrics;
 use crate::logging::create_db_span;
 use sqlx::{postgres::PgPool, types::Uuid};
@@ -100,24 +100,24 @@ impl AppointmentRepository {
     pub async fn create(&self, client_id: Uuid, appointment: CreateAppointmentRequest) -> Result<Appointment, AppError> {
         let span = create_db_span(
             "create_appointment",
-            "INSERT INTO appointments (client_id, trainer_id, title, appointment_date, start_time, duration_minutes, notes) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+            "INSERT INTO appointments (client_id, trainer_id, \"type\", appointment_date, start_time, duration_minutes, location) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
             "appointment data",
         );
         
         DbMetrics::track("INSERT", "appointments", || async {
             let new_appointment = sqlx::query_as::<_, Appointment>(
                 r#"INSERT INTO appointments 
-                   (client_id, trainer_id, title, appointment_date, start_time, duration_minutes, notes) 
+                   (client_id, trainer_id, "type", appointment_date, start_time, duration_minutes, location) 
                    VALUES ($1, $2, $3, $4, $5, $6, $7) 
                    RETURNING *"#
             )
             .bind(client_id)
             .bind(appointment.trainer_id)
-            .bind(&appointment.title)
+            .bind(&appointment.type_)
             .bind(appointment.appointment_date)
             .bind(appointment.start_time)
             .bind(appointment.duration_minutes)
-            .bind(appointment.notes)
+            .bind(appointment.location)
             .fetch_one(&self.pool)
             .await
             .map_err(AppError::DatabaseError)?;
@@ -145,9 +145,12 @@ impl AppointmentRepository {
             
             let mut needs_comma = false;
             
-            if let Some(title) = &appointment.title {
-                query_builder.push(", title = ");
-                query_builder.push_bind(title);
+            if let Some(type_) = &appointment.type_ {
+                // Validate type
+                let valid_type = AppointmentType::from(type_.as_str()).to_string();
+                
+                query_builder.push(", \"type\" = ");
+                query_builder.push_bind(valid_type);
                 needs_comma = true;
             }
             
@@ -182,10 +185,10 @@ impl AppointmentRepository {
                 needs_comma = true;
             }
             
-            if let Some(notes) = &appointment.notes {
+            if let Some(location) = &appointment.location {
                 if needs_comma { query_builder.push(", "); }
-                query_builder.push("notes = ");
-                query_builder.push_bind(notes);
+                query_builder.push("location = ");
+                query_builder.push_bind(location);
             }
             
             query_builder.push(" WHERE id = ");
