@@ -12,13 +12,13 @@ This project is a comprehensive backend API built with Rust, Actix Web, and Post
 
 Detailed documentation is available in the [docs](./docs) directory:
 
-- [API Endpoints](./api-endpoints.md) - Detailed information about all available API endpoints
-- [API Usage Examples](./api-usage-examples.md) - Examples of how to use the API with sample requests and responses
-- [Getting Started](./getting-started.md) - Setup and configuration instructions
-- [Data Models](./data-models.md) - Information about data structures and models
-- [Security](./security.md) - Authentication and security details
-- [WebSocket Chat API](./websocket-chat.md) - Real-time chat functionality documentation
-- [Monitoring](./monitoring.md) - Performance monitoring and logging information
+- [API Endpoints](./docs/api-endpoints.md) - Detailed information about all available API endpoints
+- [API Usage Examples](./docs/api-usage-examples.md) - Examples of how to use the API with sample requests and responses
+- [Getting Started](./docs/getting-started.md) - Setup and configuration instructions
+- [Data Models](./docs/data-models.md) - Information about data structures and models
+- [Security](./docs/security.md) - Authentication and security details
+- [WebSocket Chat API](./docs/websocket-chat.md) - Real-time chat functionality documentation
+- [Monitoring](./docs/monitoring.md) - Performance monitoring and logging information
 
 ## Table of Contents
 
