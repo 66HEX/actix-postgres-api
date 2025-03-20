@@ -179,6 +179,35 @@ impl AppointmentRepository {
         }).instrument(span).await
     }
 
+    pub async fn find_by_trainer_id_with_names(&self, trainer_id: Uuid) -> Result<Vec<AppointmentWithNames>, AppError> {
+        let params = format!("trainer_id={}", trainer_id);
+        let span = create_db_span(
+            "find_appointments_by_trainer_id_with_names",
+            "SELECT a.*, c.full_name as client_name, t.full_name as trainer_name FROM appointments a JOIN users c ON a.client_id = c.id JOIN users t ON a.trainer_id = t.id WHERE a.trainer_id = $1 ORDER BY a.appointment_date ASC, a.start_time ASC",
+            &params,
+        );
+        
+        DbMetrics::track("SELECT", "appointments", || async {
+            let appointments = sqlx::query_as::<_, AppointmentWithNames>(
+                r#"SELECT 
+                    a.*, 
+                    c.full_name as client_name, 
+                    t.full_name as trainer_name 
+                FROM appointments a 
+                JOIN users c ON a.client_id = c.id 
+                JOIN users t ON a.trainer_id = t.id 
+                WHERE a.trainer_id = $1 
+                ORDER BY a.appointment_date ASC, a.start_time ASC"#
+            )
+            .bind(trainer_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            Ok(appointments)
+        }).instrument(span).await
+    }
+
     pub async fn create(&self, client_id: Uuid, appointment: CreateAppointmentRequest) -> Result<Appointment, AppError> {
         let span = create_db_span(
             "create_appointment",

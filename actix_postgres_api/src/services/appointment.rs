@@ -33,11 +33,11 @@ impl AppointmentService {
         self.repository.find_by_client_id_with_names(user_id).await
     }
     
-    pub async fn get_trainer_appointments(&self, trainer_id: &str) -> Result<Vec<Appointment>, AppError> {
+    pub async fn get_trainer_appointments(&self, trainer_id: &str) -> Result<Vec<AppointmentWithNames>, AppError> {
         let user_id = Uuid::parse_str(trainer_id)
             .map_err(|_| AppError::BadRequest("Invalid user ID format".to_string()))?;
             
-        self.repository.find_by_trainer_id(user_id).await
+        self.repository.find_by_trainer_id_with_names(user_id).await
     }
     
     pub async fn create_appointment(
