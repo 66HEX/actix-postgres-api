@@ -1,8 +1,7 @@
 use crate::error::AppError;
-use crate::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest};
+use crate::models::appointment::{Appointment, AppointmentWithNames, CreateAppointmentRequest, UpdateAppointmentRequest};
 use crate::models::role::UserRole;
 use crate::database::AppointmentRepository;
-use crate::auth_utils::validate_role;
 use sqlx::{postgres::PgPool, types::Uuid};
 
 pub struct AppointmentService {
@@ -16,22 +15,22 @@ impl AppointmentService {
         }
     }
     
-    pub async fn get_all_appointments(&self) -> Result<Vec<Appointment>, AppError> {
-        self.repository.find_all().await
+    pub async fn get_all_appointments(&self) -> Result<Vec<AppointmentWithNames>, AppError> {
+        self.repository.find_all_with_names().await
     }
     
-    pub async fn get_appointment_by_id(&self, id: &str) -> Result<Appointment, AppError> {
+    pub async fn get_appointment_by_id(&self, id: &str) -> Result<AppointmentWithNames, AppError> {
         let appointment_id = Uuid::parse_str(id)
             .map_err(|_| AppError::BadRequest("Invalid appointment ID format".to_string()))?;
             
-        self.repository.find_by_id(appointment_id).await
+        self.repository.find_by_id_with_names(appointment_id).await
     }
     
-    pub async fn get_client_appointments(&self, client_id: &str) -> Result<Vec<Appointment>, AppError> {
+    pub async fn get_client_appointments(&self, client_id: &str) -> Result<Vec<AppointmentWithNames>, AppError> {
         let user_id = Uuid::parse_str(client_id)
             .map_err(|_| AppError::BadRequest("Invalid user ID format".to_string()))?;
             
-        self.repository.find_by_client_id(user_id).await
+        self.repository.find_by_client_id_with_names(user_id).await
     }
     
     pub async fn get_trainer_appointments(&self, trainer_id: &str) -> Result<Vec<Appointment>, AppError> {

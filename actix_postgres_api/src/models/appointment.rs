@@ -17,6 +17,23 @@ pub struct Appointment {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AppointmentWithNames {
+    pub id: Uuid,
+    pub client_id: Uuid,
+    pub trainer_id: Uuid,
+    pub client_name: String,
+    pub trainer_name: String,
+    pub type_: String,
+    pub appointment_date: NaiveDate,
+    pub start_time: NaiveTime,
+    pub duration_minutes: i32,
+    pub status: String,
+    pub location: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAppointmentRequest {
     pub trainer_id: Uuid,
@@ -42,6 +59,8 @@ pub struct AppointmentResponse {
     pub id: Uuid,
     pub client_id: Uuid,
     pub trainer_id: Uuid,
+    pub client_name: String,
+    pub trainer_name: String,
     pub type_: String,
     pub appointment_date: NaiveDate,
     pub start_time: NaiveTime,
@@ -58,6 +77,28 @@ impl From<Appointment> for AppointmentResponse {
             id: appointment.id,
             client_id: appointment.client_id,
             trainer_id: appointment.trainer_id,
+            client_name: String::new(), // Will be populated separately
+            trainer_name: String::new(), // Will be populated separately
+            type_: appointment.type_,
+            appointment_date: appointment.appointment_date,
+            start_time: appointment.start_time,
+            duration_minutes: appointment.duration_minutes,
+            status: appointment.status,
+            location: appointment.location,
+            created_at: appointment.created_at,
+            updated_at: appointment.updated_at,
+        }
+    }
+}
+
+impl From<AppointmentWithNames> for AppointmentResponse {
+    fn from(appointment: AppointmentWithNames) -> Self {
+        Self {
+            id: appointment.id,
+            client_id: appointment.client_id,
+            trainer_id: appointment.trainer_id,
+            client_name: appointment.client_name,
+            trainer_name: appointment.trainer_name,
             type_: appointment.type_,
             appointment_date: appointment.appointment_date,
             start_time: appointment.start_time,

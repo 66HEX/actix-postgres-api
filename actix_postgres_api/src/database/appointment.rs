@@ -1,10 +1,9 @@
 use crate::error::AppError;
-use crate::models::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentStatus, AppointmentType};
+use crate::models::appointment::{Appointment, CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentStatus, AppointmentType, AppointmentWithNames};
 use crate::monitoring::DbMetrics;
 use crate::logging::create_db_span;
 use sqlx::{postgres::PgPool, types::Uuid};
 use tracing::Instrument;
-use chrono::Utc;
 
 pub struct AppointmentRepository {
     pool: PgPool,
@@ -25,6 +24,32 @@ impl AppointmentRepository {
         DbMetrics::track("SELECT", "appointments", || async {
             let appointments = sqlx::query_as::<_, Appointment>(
                 "SELECT * FROM appointments ORDER BY appointment_date ASC, start_time ASC"
+            )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+
+            Ok(appointments)
+        }).instrument(span).await
+    }
+    
+    pub async fn find_all_with_names(&self) -> Result<Vec<AppointmentWithNames>, AppError> {
+        let span = create_db_span(
+            "find_all_appointments_with_names",
+            "SELECT a.*, c.full_name as client_name, t.full_name as trainer_name FROM appointments a JOIN users c ON a.client_id = c.id JOIN users t ON a.trainer_id = t.id ORDER BY a.appointment_date ASC, a.start_time ASC",
+            "None",
+        );
+        
+        DbMetrics::track("SELECT", "appointments", || async {
+            let appointments = sqlx::query_as::<_, AppointmentWithNames>(
+                r#"SELECT 
+                    a.*, 
+                    c.full_name as client_name, 
+                    t.full_name as trainer_name 
+                FROM appointments a 
+                JOIN users c ON a.client_id = c.id 
+                JOIN users t ON a.trainer_id = t.id 
+                ORDER BY a.appointment_date ASC, a.start_time ASC"#
             )
             .fetch_all(&self.pool)
             .await
@@ -54,6 +79,34 @@ impl AppointmentRepository {
             appointment.ok_or_else(|| AppError::NotFound(format!("Appointment with id {} not found", id)))
         }).instrument(span).await
     }
+    
+    pub async fn find_by_id_with_names(&self, id: Uuid) -> Result<AppointmentWithNames, AppError> {
+        let params = format!("id={}", id);
+        let span = create_db_span(
+            "find_appointment_by_id_with_names",
+            "SELECT a.*, c.full_name as client_name, t.full_name as trainer_name FROM appointments a JOIN users c ON a.client_id = c.id JOIN users t ON a.trainer_id = t.id WHERE a.id = $1",
+            &params,
+        );
+        
+        DbMetrics::track("SELECT", "appointments", || async {
+            let appointment = sqlx::query_as::<_, AppointmentWithNames>(
+                r#"SELECT 
+                    a.*, 
+                    c.full_name as client_name, 
+                    t.full_name as trainer_name 
+                FROM appointments a 
+                JOIN users c ON a.client_id = c.id 
+                JOIN users t ON a.trainer_id = t.id 
+                WHERE a.id = $1"#
+            )
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            appointment.ok_or_else(|| AppError::NotFound(format!("Appointment with id {} not found", id)))
+        }).instrument(span).await
+    }
 
     pub async fn find_by_client_id(&self, client_id: Uuid) -> Result<Vec<Appointment>, AppError> {
         let params = format!("client_id={}", client_id);
@@ -66,6 +119,35 @@ impl AppointmentRepository {
         DbMetrics::track("SELECT", "appointments", || async {
             let appointments = sqlx::query_as::<_, Appointment>(
                 "SELECT * FROM appointments WHERE client_id = $1 ORDER BY appointment_date ASC, start_time ASC"
+            )
+            .bind(client_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(AppError::DatabaseError)?;
+            
+            Ok(appointments)
+        }).instrument(span).await
+    }
+    
+    pub async fn find_by_client_id_with_names(&self, client_id: Uuid) -> Result<Vec<AppointmentWithNames>, AppError> {
+        let params = format!("client_id={}", client_id);
+        let span = create_db_span(
+            "find_appointments_by_client_id_with_names",
+            "SELECT a.*, c.full_name as client_name, t.full_name as trainer_name FROM appointments a JOIN users c ON a.client_id = c.id JOIN users t ON a.trainer_id = t.id WHERE a.client_id = $1 ORDER BY a.appointment_date ASC, a.start_time ASC",
+            &params,
+        );
+        
+        DbMetrics::track("SELECT", "appointments", || async {
+            let appointments = sqlx::query_as::<_, AppointmentWithNames>(
+                r#"SELECT 
+                    a.*, 
+                    c.full_name as client_name, 
+                    t.full_name as trainer_name 
+                FROM appointments a 
+                JOIN users c ON a.client_id = c.id 
+                JOIN users t ON a.trainer_id = t.id 
+                WHERE a.client_id = $1 
+                ORDER BY a.appointment_date ASC, a.start_time ASC"#
             )
             .bind(client_id)
             .fetch_all(&self.pool)

@@ -4,7 +4,7 @@ use crate::models::role::UserRole;
 use crate::error::AppError;
 use sqlx::postgres::PgPool;
 
-use crate::models::{CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse};
+use crate::models::appointment::{CreateAppointmentRequest, UpdateAppointmentRequest, AppointmentResponse, AppointmentWithNames};
 use crate::services::AppointmentService;
 
 #[get("/appointments")]
