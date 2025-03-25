@@ -116,18 +116,20 @@ curl -X POST http://localhost:8080/api/appointments \
 Response:
 ```json
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
-  "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
-  "title": "Personal Training Session",
-  "appointment_date": "2025-04-15",
-  "start_time": "14:30:00",
-  "duration_minutes": 60,
-  "status": "scheduled",
-  "notes": "Focus on strength training",
-  "created_at": "2025-04-01T10:00:00Z",
-  "updated_at": "2025-04-01T10:00:00Z"
-}
+    "id": "b2c3d4e5-f6a7-8901-bcde-f1234567890a",
+    "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+    "client_name": "Jane Doe",
+    "trainer_name": "James Doe",
+    "type_": "consultation",
+    "appointment_date": "2025-04-20",
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "status": "scheduled",
+    "location": "Gym Room 3",
+    "created_at": "2025-04-02T09:30:00Z",
+    "updated_at": "2025-04-02T09:30:00Z"
+  }
 ```
 </details>
 
@@ -143,28 +145,32 @@ Response:
 ```json
 [
   {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
-    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
-    "title": "Personal Training Session",
-    "appointment_date": "2025-04-15",
-    "start_time": "14:30:00",
-    "duration_minutes": 60,
-    "status": "scheduled",
-    "notes": "Focus on strength training",
-    "created_at": "2025-04-01T10:00:00Z",
-    "updated_at": "2025-04-01T10:00:00Z"
-  },
-  {
     "id": "b2c3d4e5-f6a7-8901-bcde-f1234567890a",
     "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
     "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
-    "title": "Cardio Session",
+    "client_name": "Jane Doe",
+    "trainer_name": "James Doe",
+    "type_": "consultation",
     "appointment_date": "2025-04-20",
     "start_time": "10:00:00",
     "duration_minutes": 45,
     "status": "scheduled",
-    "notes": "Endurance training",
+    "location": "Gym Room 3",
+    "created_at": "2025-04-02T09:30:00Z",
+    "updated_at": "2025-04-02T09:30:00Z"
+  }
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f1234567890a",
+    "client_id": "c1d2e3f4-a5b6-7890-abcd-ef1234567890",
+    "trainer_id": "t1r2a3i4-n5e6r7-abcd-ef1234567890",
+    "client_name": "Jane Doe",
+    "trainer_name": "James Doe",
+    "type_": "consultation",
+    "appointment_date": "2025-04-20",
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "status": "scheduled",
+    "location": "Gym Room 3",
     "created_at": "2025-04-02T09:30:00Z",
     "updated_at": "2025-04-02T09:30:00Z"
   }
